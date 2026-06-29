@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TUESTE — Sistema de Gestión</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  [x-cloak] { display: none !important; }
+  .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all; }
+  .sidebar-link.active { @apply bg-amber-500 text-white; }
+  .sidebar-link:not(.active) { @apply text-slate-300 hover:bg-slate-700 hover:text-white; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6; }
+  .kpi-card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-5; }
+  .btn-primary { @apply bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all; }
+  .btn-secondary { @apply bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-all; }
+  .btn-danger { @apply bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-all; }
+  .input { @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400; }
+  .label { @apply block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide; }
+  .badge-green { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700; }
+  .badge-red { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700; }
+  .badge-yellow { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700; }
+  .badge-blue { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700; }
+  .table-row { @apply border-b border-slate-50 hover:bg-slate-50 transition-colors; }
+  .th { @apply text-left text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3; }
+  .td { @apply py-3 text-sm text-slate-700; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans antialiased" x-data="app()" x-init="init()" x-cloak>
+
+<!-- ══════════════════ LOGIN ══════════════════ -->
+<div x-show="!token" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+  <div class="w-full max-w-md px-8 py-10 bg-white rounded-3xl shadow-2xl">
+    <div class="text-center mb-8">
+      <div class="text-4xl font-black text-amber-500 tracking-tight">☕ TUESTE</div>
+      <p class="text-slate-400 text-sm mt-1">Sistema de Gestión Gastronómica</p>
+    </div>
+    <div x-show="loginMode">
+      <div class="mb-4">
+        <label class="label">Email</label>
+        <input class="input" type="email" x-model="loginEmail" placeholder="admin@tueste.com">
+      </div>
+      <div class="mb-6">
+        <label class="label">Contraseña</label>
+        <input class="input" type="password" x-model="loginPass" @keyup.enter="doLogin()" placeholder="••••••••">
+      </div>
+      <button class="w-full btn-primary py-3 text-base" @click="doLogin()">Ingresar</button>
+      <p class="text-center text-sm text-slate-400 mt-4">
+        ¿Primera vez? <a href="#" class="text-amber-500 font-medium" @click="loginMode=false">Crear cuenta</a>
+      </p>
+    </div>
+    <div x-show="!loginMode">
+      <div class="mb-3">
+        <label class="label">Nombre</label>
+        <input class="input" x-model="regNombre" placeholder="Tu nombre">
+      </div>
+      <div class="mb-3">
+        <label class="label">Email</label>
+        <input class="input" type="email" x-model="regEmail" placeholder="tu@email.com">
+      </div>
+      <div class="mb-6">
+        <label class="label">Contraseña</label>
+        <input class="input" type="password" x-model="regPass" placeholder="••••••••">
+      </div>
+      <button class="w-full btn-primary py-3 text-base" @click="doRegistro()">Crear cuenta</button>
+      <p class="text-center text-sm text-slate-400 mt-4">
+        <a href="#" class="text-amber-500 font-medium" @click="loginMode=true">Volver al login</a>
+      </p>
+    </div>
+    <div x-show="error" class="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg" x-text="error"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div x-show="token" class="flex h-screen overflow-hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="w-64 bg-slate-900 flex flex-col flex-shrink-0">
+    <div class="px-6 py-5 border-b border-slate-700">
+      <div class="text-2xl font-black text-amber-400">☕ TUESTE</div>
+      <div class="text-xs text-slate-400 mt-0.5" x-text="userName"></div>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <button class="sidebar-link w-full" :class="{'active': page==='dashboard'}" @click="page='dashboard'; loadDashboard()">
+        📊 Dashboard
+      </button>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Operaciones</div>
+      <button class="sidebar-link w-full" :class="{'active': page==='ingredientes'}" @click="page='ingredientes'; loadIngredientes()">
+        🧂 Ingredientes
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='productos'}" @click="page='productos'; loadProductos()">
+        🍽️ Productos
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='recetas'}" @click="page='recetas'; loadRecetas()">
+        📋 Recetas
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='ventas'}" @click="page='ventas'; loadVentas()">
+        💰 Ventas
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='compras'}" @click="page='compras'; loadCompras()">
+        🛒 Compras
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='stock'}" @click="page='stock'; loadStock()">
+        📦 Stock
+      </button>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Finanzas</div>
+      <button class="sidebar-link w-full" :class="{'active': page==='pl'}" @click="page='pl'; loadPL()">
+        📈 Estado de Resultados
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='gastos'}" @click="page='gastos'; loadGastos()">
+        💼 Gastos Fijos
+      </button>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Maestros</div>
+      <button class="sidebar-link w-full" :class="{'active': page==='proveedores'}" @click="page='proveedores'; loadProveedores()">
+        🏭 Proveedores
+      </button>
+    </nav>
+    <div class="px-3 py-4 border-t border-slate-700">
+      <button class="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-900/30" @click="logout()">
+        🚪 Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 overflow-y-auto">
+
+    <!-- ── DASHBOARD ── -->
+    <div x-show="page==='dashboard'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Dashboard Ejecutivo</h1>
+          <p class="text-slate-400 text-sm" x-text="'Datos del mes en curso · Actualizado ahora'"></p>
+        </div>
+        <button class="btn-secondary" @click="loadDashboard()">🔄 Actualizar</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" x-show="dash">
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ventas del Mes</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_mes)"></p>
+          <p class="text-xs mt-1" :class="dash.resumen?.variacion_vs_mes_anterior >= 0 ? 'text-green-600' : 'text-red-500'">
+            <span x-text="(dash.resumen?.variacion_vs_mes_anterior >= 0 ? '▲ ' : '▼ ') + Math.abs(dash.resumen?.variacion_vs_mes_anterior) + '% vs mes anterior'"></span>
+          </p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Margen Bruto</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.margen_bruto)"></p>
+          <p class="text-xs text-slate-400 mt-1" x-text="dash.resumen?.margen_pct + '% sobre ventas'"></p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Resultado Neto</p>
+          <p class="text-2xl font-bold mt-1" :class="dash.resumen?.resultado_neto >= 0 ? 'text-green-600' : 'text-red-500'" x-text="'$' + fmt(dash.resumen?.resultado_neto)"></p>
+          <p class="text-xs text-slate-400 mt-1" x-text="dash.resumen?.rentabilidad_neta_pct + '% rentabilidad'"></p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ticket Promedio</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.ticket_promedio)"></p>
+          <p class="text-xs text-slate-400 mt-1" x-text="dash.resumen?.cantidad_ventas_mes + ' ventas'"></p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">CMV / Ventas</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="dash.resumen?.cmv_pct + '%'"></p>
+          <p class="text-xs text-slate-400 mt-1">Costo mercadería</p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ventas Hoy</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_hoy)"></p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Compras del Mes</p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_compras_mes)"></p>
+        </div>
+        <div class="kpi-card" :class="dash.resumen?.stock_critico_count > 0 ? 'border-red-200 bg-red-50' : ''">
+          <p class="text-xs font-semibold uppercase tracking-wide" :class="dash.resumen?.stock_critico_count > 0 ? 'text-red-400' : 'text-slate-400'">Stock Crítico</p>
+          <p class="text-2xl font-bold mt-1" :class="dash.resumen?.stock_critico_count > 0 ? 'text-red-600' : 'text-slate-800'" x-text="dash.resumen?.stock_critico_count + ' ingredientes'"></p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Gráfico ventas -->
+        <div class="card lg:col-span-2">
+          <h3 class="font-semibold text-slate-700 mb-4">Ventas últimos 30 días</h3>
+          <canvas id="chartVentas" height="120"></canvas>
+        </div>
+        <!-- Top productos -->
+        <div class="card">
+          <h3 class="font-semibold text-slate-700 mb-4">Top Productos</h3>
+          <div class="space-y-2" x-show="dash.top_productos">
+            <template x-for="p in (dash.top_productos || []).slice(0,8)" :key="p.nombre">
+              <div class="flex items-center justify-between py-1">
+                <span class="text-sm text-slate-600 truncate mr-2" x-text="p.nombre"></span>
+                <span class="text-sm font-semibold text-slate-800 flex-shrink-0" x-text="'$'+fmt(p.ventas)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <!-- Peores márgenes -->
+        <div class="card lg:col-span-3">
+          <h3 class="font-semibold text-slate-700 mb-4">⚠️ Productos con menor margen</h3>
+          <table class="w-full">
+            <thead><tr>
+              <th class="th">Producto</th>
+              <th class="th">Precio de venta</th>
+              <th class="th">Costo receta</th>
+              <th class="th">Margen</th>
+            </tr></thead>
+            <tbody>
+              <template x-for="r in (dash.peores_margenes || [])" :key="r.producto">
+                <tr class="table-row">
+                  <td class="td font-medium" x-text="r.producto"></td>
+                  <td class="td" x-text="'$'+fmt(r.precio_venta)"></td>
+                  <td class="td" x-text="'$'+fmt(r.costo)"></td>
+                  <td class="td">
+                    <span :class="r.margen_pct < 40 ? 'badge-red' : r.margen_pct < 60 ? 'badge-yellow' : 'badge-green'" x-text="r.margen_pct + '%'"></span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INGREDIENTES ── -->
+    <div x-show="page==='ingredientes'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Ingredientes / Insumos</h1>
+        <button class="btn-primary" @click="modalIngrediente={}; showModalIngrediente=true">+ Nuevo ingrediente</button>
+      </div>
+      <div class="card">
+        <div class="mb-4">
+          <input class="input w-64" placeholder="Buscar..." x-model="buscarIng">
+        </div>
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Nombre</th>
+            <th class="th">Unidad</th>
+            <th class="th">Costo actual</th>
+            <th class="th">Stock actual</th>
+            <th class="th">Stock mínimo</th>
+            <th class="th">Estado</th>
+            <th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="i in ingredientesFiltrados()" :key="i.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="i.nombre"></td>
+                <td class="td text-slate-400" x-text="i.unidad"></td>
+                <td class="td font-semibold" x-text="'$'+fmt(i.costo_actual)"></td>
+                <td class="td" x-text="fmt(i.stock_actual)+' '+i.unidad"></td>
+                <td class="td text-slate-400" x-text="fmt(i.stock_minimo)+' '+i.unidad"></td>
+                <td class="td">
+                  <span :class="i.stock_critico ? 'badge-red' : 'badge-green'" x-text="i.stock_critico ? 'CRÍTICO' : 'OK'"></span>
+                </td>
+                <td class="td flex gap-2">
+                  <button class="btn-secondary text-xs py-1 px-2" @click="editIngrediente(i)">Editar</button>
+                  <button class="btn-danger" @click="deleteIngrediente(i.id)">Eliminar</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <!-- Modal ingrediente -->
+      <div x-show="showModalIngrediente" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalIngrediente.id ? 'Editar ingrediente' : 'Nuevo ingrediente'"></h2>
+          <div class="space-y-3">
+            <div><label class="label">Nombre</label><input class="input" x-model="modalIngrediente.nombre"></div>
+            <div><label class="label">Unidad (kg, litro, unidad, g, ml...)</label><input class="input" x-model="modalIngrediente.unidad"></div>
+            <div><label class="label">Costo actual por unidad ($)</label><input class="input" type="number" step="0.01" x-model="modalIngrediente.costo_actual"></div>
+            <div><label class="label">Stock actual</label><input class="input" type="number" step="0.001" x-model="modalIngrediente.stock_actual"></div>
+            <div><label class="label">Stock mínimo (alerta)</label><input class="input" type="number" step="0.001" x-model="modalIngrediente.stock_minimo"></div>
+            <div><label class="label">Proveedor principal</label>
+              <select class="input" x-model="modalIngrediente.proveedor_id">
+                <option value="">Sin asignar</option>
+                <template x-for="p in proveedores" :key="p.id"><option :value="p.id" x-text="p.nombre"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveIngrediente()">Guardar</button>
+            <button class="btn-secondary" @click="showModalIngrediente=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRODUCTOS ── -->
+    <div x-show="page==='productos'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Productos</h1>
+        <button class="btn-primary" @click="modalProducto={}; showModalProducto=true">+ Nuevo producto</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Nombre</th>
+            <th class="th">Categoría</th>
+            <th class="th">Precio venta</th>
+            <th class="th">Costo receta</th>
+            <th class="th">Margen</th>
+            <th class="th">Receta</th>
+            <th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="p in productos" :key="p.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="p.nombre"></td>
+                <td class="td text-slate-400" x-text="p.categoria || '—'"></td>
+                <td class="td font-semibold text-green-600" x-text="'$'+fmt(p.precio_venta)"></td>
+                <td class="td" x-text="p.costo ? '$'+fmt(p.costo) : '—'"></td>
+                <td class="td">
+                  <span x-show="p.margen_pct !== null"
+                    :class="p.margen_pct < 40 ? 'badge-red' : p.margen_pct < 60 ? 'badge-yellow' : 'badge-green'"
+                    x-text="p.margen_pct + '%'"></span>
+                  <span x-show="p.margen_pct === null" class="text-slate-300">—</span>
+                </td>
+                <td class="td">
+                  <span :class="p.tiene_receta ? 'badge-green' : 'badge-yellow'" x-text="p.tiene_receta ? 'Sí' : 'Sin receta'"></span>
+                </td>
+                <td class="td flex gap-2">
+                  <button class="btn-secondary text-xs py-1 px-2" @click="editProducto(p)">Editar</button>
+                  <button class="btn-danger" @click="deleteProducto(p.id)">Eliminar</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <!-- Modal producto -->
+      <div x-show="showModalProducto" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalProducto.id ? 'Editar producto' : 'Nuevo producto'"></h2>
+          <div class="space-y-3">
+            <div><label class="label">Nombre</label><input class="input" x-model="modalProducto.nombre"></div>
+            <div><label class="label">Descripción</label><input class="input" x-model="modalProducto.descripcion"></div>
+            <div><label class="label">Precio de venta ($)</label><input class="input" type="number" step="0.01" x-model="modalProducto.precio_venta"></div>
+            <div><label class="label">Categoría</label>
+              <select class="input" x-model="modalProducto.categoria_id">
+                <option value="">Sin categoría</option>
+                <template x-for="c in categorias.filter(c=>c.tipo==='producto')" :key="c.id"><option :value="c.id" x-text="c.nombre"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveProducto()">Guardar</button>
+            <button class="btn-secondary" @click="showModalProducto=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RECETAS ── -->
+    <div x-show="page==='recetas'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Recetas</h1>
+        <button class="btn-primary" @click="initModalReceta()">+ Nueva receta</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Producto</th>
+            <th class="th">Rendimiento</th>
+            <th class="th">Costo calculado</th>
+            <th class="th">Precio venta</th>
+            <th class="th">Margen</th>
+            <th class="th">Ingredientes</th>
+            <th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="r in recetas" :key="r.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="r.producto"></td>
+                <td class="td text-slate-400" x-text="r.rendimiento + ' porciones'"></td>
+                <td class="td font-semibold text-orange-600" x-text="'$'+fmt(r.costo_calculado)"></td>
+                <td class="td text-green-600" x-text="'$'+fmt(r.precio_venta)"></td>
+                <td class="td">
+                  <span :class="r.margen_pct < 40 ? 'badge-red' : r.margen_pct < 60 ? 'badge-yellow' : 'badge-green'" x-text="r.margen_pct + '%'"></span>
+                </td>
+                <td class="td text-slate-400" x-text="r.items.length + ' ingredientes'"></td>
+                <td class="td flex gap-2">
+                  <button class="btn-secondary text-xs py-1 px-2" @click="verReceta(r)">Ver</button>
+                  <button class="btn-danger" @click="deleteReceta(r.id)">Eliminar</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal nueva receta -->
+      <div x-show="showModalReceta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto py-8">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nueva receta</h2>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div><label class="label">Producto</label>
+              <select class="input" x-model="modalReceta.producto_id">
+                <option value="">Seleccioná un producto</option>
+                <template x-for="p in productos.filter(p=>!p.tiene_receta)" :key="p.id">
+                  <option :value="p.id" x-text="p.nombre"></option>
+                </template>
+              </select>
+            </div>
+            <div><label class="label">Rendimiento (porciones)</label>
+              <input class="input" type="number" step="0.1" x-model="modalReceta.rendimiento" value="1">
+            </div>
+            <div class="col-span-2"><label class="label">Descripción / procedimiento</label>
+              <textarea class="input" rows="2" x-model="modalReceta.descripcion"></textarea>
+            </div>
+          </div>
+          <h3 class="font-semibold text-slate-700 mb-3">Ingredientes</h3>
+          <template x-for="(item, idx) in modalReceta.items" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1"><label class="label">Ingrediente</label>
+                <select class="input" x-model="item.ingrediente_id">
+                  <option value="">Seleccionar</option>
+                  <template x-for="i in ingredientes" :key="i.id"><option :value="i.id" x-text="i.nombre + ' ($'+fmt(i.costo_actual)+'/'+i.unidad+')'"></option></template>
+                </select>
+              </div>
+              <div class="w-28"><label class="label">Cantidad</label>
+                <input class="input" type="number" step="0.001" x-model="item.cantidad">
+              </div>
+              <div class="w-24"><label class="label">Unidad</label>
+                <input class="input" x-model="item.unidad" placeholder="kg">
+              </div>
+              <button class="btn-danger mb-0.5" @click="modalReceta.items.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary mt-2 mb-4" @click="modalReceta.items.push({ingrediente_id:'', cantidad:1, unidad:''})">+ Agregar ingrediente</button>
+
+          <!-- Preview costo -->
+          <div class="bg-amber-50 rounded-xl p-4 mb-4">
+            <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Preview de costo</p>
+            <p class="text-2xl font-bold text-amber-600" x-text="'Costo estimado: $' + fmt(calcularCostoPreview())"></p>
+          </div>
+
+          <div class="flex gap-3">
+            <button class="btn-primary flex-1" @click="saveReceta()">Guardar receta</button>
+            <button class="btn-secondary" @click="showModalReceta=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal ver receta -->
+      <div x-show="showVerReceta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-xl shadow-2xl" x-show="recetaVista">
+          <h2 class="font-bold text-lg text-slate-800 mb-1" x-text="recetaVista?.producto"></h2>
+          <p class="text-sm text-slate-400 mb-4" x-text="recetaVista?.descripcion"></p>
+          <table class="w-full mb-4">
+            <thead><tr><th class="th">Ingrediente</th><th class="th">Cantidad</th><th class="th">Costo</th></tr></thead>
+            <tbody>
+              <template x-for="it in (recetaVista?.items || [])" :key="it.id">
+                <tr class="table-row">
+                  <td class="td" x-text="it.ingrediente"></td>
+                  <td class="td" x-text="it.cantidad + ' ' + it.unidad"></td>
+                  <td class="td" x-text="'$'+fmt(it.subtotal)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="bg-slate-50 rounded-xl p-4">
+            <div class="flex justify-between"><span class="text-sm text-slate-500">Rendimiento</span><span class="font-semibold" x-text="recetaVista?.rendimiento + ' porciones'"></span></div>
+            <div class="flex justify-between mt-1"><span class="text-sm text-slate-500">Costo calculado</span><span class="font-bold text-orange-600" x-text="'$'+fmt(recetaVista?.costo_calculado)"></span></div>
+            <div class="flex justify-between mt-1"><span class="text-sm text-slate-500">Precio de venta</span><span class="font-bold text-green-600" x-text="'$'+fmt(recetaVista?.precio_venta)"></span></div>
+            <div class="flex justify-between mt-1"><span class="text-sm text-slate-500">Margen</span><span class="font-bold" x-text="recetaVista?.margen_pct + '%'"></span></div>
+          </div>
+          <button class="btn-secondary w-full mt-4" @click="showVerReceta=false">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VENTAS ── -->
+    <div x-show="page==='ventas'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Ventas</h1>
+        <button class="btn-primary" @click="initModalVenta()">+ Registrar venta</button>
+      </div>
+
+      <!-- Resumen rápido -->
+      <div class="grid grid-cols-4 gap-4 mb-6" x-show="ventasResumen">
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ventas mes</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(ventasResumen?.total_ventas)"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Margen bruto</p><p class="text-xl font-bold mt-1 text-green-600" x-text="'$'+fmt(ventasResumen?.margen_bruto)"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Margen %</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="ventasResumen?.margen_pct+'%'"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ticket promedio</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(ventasResumen?.ticket_promedio)"></p></div>
+      </div>
+
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Fecha</th>
+            <th class="th">Local</th>
+            <th class="th">Canal</th>
+            <th class="th">Total</th>
+            <th class="th">Costo</th>
+            <th class="th">Margen</th>
+            <th class="th">Items</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="v in ventas" :key="v.id">
+              <tr class="table-row">
+                <td class="td text-slate-400 text-xs" x-text="fmtFecha(v.fecha)"></td>
+                <td class="td" x-text="v.local || '—'"></td>
+                <td class="td"><span class="badge-blue" x-text="v.canal"></span></td>
+                <td class="td font-bold text-green-600" x-text="'$'+fmt(v.total)"></td>
+                <td class="td text-orange-500" x-text="'$'+fmt(v.costo_total)"></td>
+                <td class="td"><span :class="v.margen>=60?'badge-green':v.margen>=40?'badge-yellow':'badge-red'" x-text="v.margen+'%'"></span></td>
+                <td class="td text-slate-400" x-text="v.items_count + ' productos'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal venta -->
+      <div x-show="showModalVenta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 py-8 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Registrar venta</h2>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div><label class="label">Canal</label>
+              <select class="input" x-model="modalVenta.canal">
+                <option value="mostrador">Mostrador</option>
+                <option value="delivery">Delivery</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div><label class="label">Descuento ($)</label>
+              <input class="input" type="number" step="0.01" x-model="modalVenta.descuento" value="0">
+            </div>
+          </div>
+          <h3 class="font-semibold text-slate-700 mb-3">Productos vendidos</h3>
+          <template x-for="(item, idx) in modalVenta.items" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1"><label class="label">Producto</label>
+                <select class="input" x-model="item.producto_id" @change="setPrecioVenta(item)">
+                  <option value="">Seleccionar</option>
+                  <template x-for="p in productos" :key="p.id"><option :value="p.id" x-text="p.nombre"></option></template>
+                </select>
+              </div>
+              <div class="w-24"><label class="label">Cantidad</label>
+                <input class="input" type="number" step="1" x-model="item.cantidad">
+              </div>
+              <div class="w-32"><label class="label">Precio unit.</label>
+                <input class="input" type="number" step="0.01" x-model="item.precio_unitario">
+              </div>
+              <button class="btn-danger mb-0.5" @click="modalVenta.items.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary mt-1 mb-4" @click="modalVenta.items.push({producto_id:'', cantidad:1, precio_unitario:0})">+ Agregar producto</button>
+          <div class="bg-green-50 rounded-xl p-4 mb-4">
+            <p class="text-2xl font-bold text-green-600" x-text="'Total: $' + fmt(calcularTotalVenta())"></p>
+          </div>
+          <div class="flex gap-3">
+            <button class="btn-primary flex-1" @click="saveVenta()">Guardar venta</button>
+            <button class="btn-secondary" @click="showModalVenta=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPRAS ── -->
+    <div x-show="page==='compras'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Órdenes de Compra</h1>
+        <button class="btn-primary" @click="initModalOC()">+ Nueva OC</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Proveedor</th>
+            <th class="th">Estado</th>
+            <th class="th">Fecha</th>
+            <th class="th">Total</th>
+            <th class="th">Items</th>
+            <th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="oc in compras" :key="oc.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="oc.proveedor"></td>
+                <td class="td">
+                  <span :class="oc.estado==='recibida'?'badge-green':oc.estado==='enviada'?'badge-blue':'badge-yellow'" x-text="oc.estado"></span>
+                </td>
+                <td class="td text-slate-400 text-xs" x-text="fmtFecha(oc.fecha_emision)"></td>
+                <td class="td font-bold" x-text="'$'+fmt(oc.total)"></td>
+                <td class="td text-slate-400" x-text="oc.items_count + ' items'"></td>
+                <td class="td flex gap-2">
+                  <button x-show="oc.estado !== 'recibida'" class="btn-primary text-xs py-1 px-3" @click="recibirOC(oc.id)">✓ Recibir</button>
+                  <span x-show="oc.estado === 'recibida'" class="text-green-500 text-sm">Recibida ✓</span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal OC -->
+      <div x-show="showModalOC" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 py-8 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nueva Orden de Compra</h2>
+          <div class="mb-4">
+            <label class="label">Proveedor</label>
+            <select class="input" x-model="modalOC.proveedor_id">
+              <option value="">Seleccionar proveedor</option>
+              <template x-for="p in proveedores" :key="p.id"><option :value="p.id" x-text="p.nombre"></option></template>
+            </select>
+          </div>
+          <h3 class="font-semibold text-slate-700 mb-3">Ingredientes a comprar</h3>
+          <template x-for="(item, idx) in modalOC.items" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1"><label class="label">Ingrediente</label>
+                <select class="input" x-model="item.ingrediente_id">
+                  <option value="">Seleccionar</option>
+                  <template x-for="i in ingredientes" :key="i.id"><option :value="i.id" x-text="i.nombre"></option></template>
+                </select>
+              </div>
+              <div class="w-28"><label class="label">Cantidad</label>
+                <input class="input" type="number" step="0.001" x-model="item.cantidad">
+              </div>
+              <div class="w-32"><label class="label">Precio unit. ($)</label>
+                <input class="input" type="number" step="0.01" x-model="item.precio_unitario">
+              </div>
+              <button class="btn-danger mb-0.5" @click="modalOC.items.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary mt-1 mb-4" @click="modalOC.items.push({ingrediente_id:'', cantidad:1, precio_unitario:0})">+ Agregar ingrediente</button>
+          <div class="bg-blue-50 rounded-xl p-4 mb-4">
+            <p class="text-2xl font-bold text-blue-600" x-text="'Total OC: $' + fmt(calcularTotalOC())"></p>
+          </div>
+          <div class="flex gap-3">
+            <button class="btn-primary flex-1" @click="saveOC()">Guardar OC</button>
+            <button class="btn-secondary" @click="showModalOC=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STOCK ── -->
+    <div x-show="page==='stock'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Inventario / Stock</h1>
+        <button class="btn-primary" @click="showModalAjuste=true; modalAjuste={}">Ajuste manual de stock</button>
+      </div>
+      <div class="grid grid-cols-2 gap-6 mb-6">
+        <div class="card">
+          <h3 class="font-semibold text-slate-700 mb-4">⚠️ Stock crítico</h3>
+          <template x-if="stockCritico.length === 0">
+            <p class="text-green-500 text-sm">✅ Todo el stock está en niveles normales.</p>
+          </template>
+          <template x-for="i in stockCritico" :key="i.id">
+            <div class="flex justify-between items-center py-2 border-b border-red-50">
+              <span class="text-sm font-medium text-red-700" x-text="i.nombre"></span>
+              <span class="text-xs text-red-500" x-text="fmt(i.stock_actual)+'/'+fmt(i.stock_minimo)+' '+i.unidad"></span>
+            </div>
+          </template>
+        </div>
+        <div class="card">
+          <h3 class="font-semibold text-slate-700 mb-4">Últimos movimientos</h3>
+          <template x-for="m in movimientos.slice(0,10)" :key="m.id">
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-50">
+              <div>
+                <span class="text-sm font-medium text-slate-700" x-text="m.ingrediente"></span>
+                <span class="text-xs text-slate-400 ml-2" x-text="m.motivo"></span>
+              </div>
+              <span :class="m.cantidad > 0 ? 'text-green-600' : 'text-red-500'" class="text-sm font-semibold" x-text="(m.cantidad>0?'+':'')+fmt(m.cantidad)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+      <!-- Modal ajuste -->
+      <div x-show="showModalAjuste" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Ajuste de stock</h2>
+          <div class="space-y-3">
+            <div><label class="label">Ingrediente</label>
+              <select class="input" x-model="modalAjuste.ingrediente_id">
+                <option value="">Seleccionar</option>
+                <template x-for="i in ingredientes" :key="i.id"><option :value="i.id" x-text="i.nombre + ' (actual: '+fmt(i.stock_actual)+' '+i.unidad+')'"></option></template>
+              </select>
+            </div>
+            <div><label class="label">Stock real (inventario físico)</label>
+              <input class="input" type="number" step="0.001" x-model="modalAjuste.cantidad_nueva">
+            </div>
+            <div><label class="label">Motivo del ajuste</label>
+              <input class="input" x-model="modalAjuste.motivo" placeholder="Inventario físico, merma, rotura...">
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveAjuste()">Guardar ajuste</button>
+            <button class="btn-secondary" @click="showModalAjuste=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── P&L ── -->
+    <div x-show="page==='pl'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Estado de Resultados</h1>
+        <div class="flex gap-2">
+          <select class="input w-24" x-model="plMes" @change="loadPL()">
+            <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m"><option :value="m" x-text="['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m-1]"></option></template>
+          </select>
+          <input class="input w-24" type="number" x-model="plAnio" @change="loadPL()">
+        </div>
+      </div>
+      <div class="card max-w-2xl" x-show="pl">
+        <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest mb-4">Período: <span x-text="pl?.periodo"></span></h3>
+        <div class="space-y-2">
+          <div class="flex justify-between py-2 border-b border-slate-100">
+            <span class="font-semibold text-slate-800">Ventas netas</span>
+            <span class="font-bold text-green-600 text-lg" x-text="'$'+fmt(pl?.ingresos?.ventas)"></span>
+          </div>
+          <div class="flex justify-between py-2 border-b border-slate-100">
+            <span class="text-slate-500">(-) Costo de mercadería (CMV)</span>
+            <span class="text-red-500" x-text="'-$'+fmt(pl?.costo_mercaderia)"></span>
+          </div>
+          <div class="flex justify-between py-3 border-b-2 border-slate-300 bg-slate-50 px-2 rounded">
+            <span class="font-bold text-slate-800">= Margen Bruto</span>
+            <span class="font-bold text-slate-800 text-lg" x-text="'$'+fmt(pl?.margen_bruto) + ' ('+pl?.margen_bruto_pct+'%)'"></span>
+          </div>
+          <div class="pt-2">
+            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Gastos operativos</p>
+            <template x-for="[cat, monto] in Object.entries(pl?.gastos_operativos || {})" :key="cat">
+              <div class="flex justify-between py-1.5">
+                <span class="text-slate-500 text-sm" x-text="cat"></span>
+                <span class="text-slate-600 text-sm" x-text="'-$'+fmt(monto)"></span>
+              </div>
+            </template>
+          </div>
+          <div class="flex justify-between py-2 border-t border-slate-100">
+            <span class="text-slate-500">Total gastos operativos</span>
+            <span class="text-red-500" x-text="'-$'+fmt(pl?.total_gastos)"></span>
+          </div>
+          <div class="flex justify-between py-4 bg-slate-800 text-white px-4 rounded-xl mt-2">
+            <span class="font-bold text-lg">RESULTADO NETO</span>
+            <span class="font-black text-xl" :class="pl?.resultado_neto >= 0 ? 'text-green-400' : 'text-red-400'" x-text="'$'+fmt(pl?.resultado_neto) + ' ('+pl?.rentabilidad_pct+'%)'"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GASTOS ── -->
+    <div x-show="page==='gastos'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Gastos Fijos</h1>
+        <button class="btn-primary" @click="modalGasto={}; showModalGasto=true">+ Agregar gasto</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr><th class="th">Concepto</th><th class="th">Categoría</th><th class="th">Mes</th><th class="th">Monto</th><th class="th">Acciones</th></tr></thead>
+          <tbody>
+            <template x-for="g in gastos" :key="g.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="g.concepto"></td>
+                <td class="td text-slate-400" x-text="g.categoria || '—'"></td>
+                <td class="td text-slate-400" x-text="g.mes+'/'+g.anio"></td>
+                <td class="td font-bold text-slate-800" x-text="'$'+fmt(g.monto)"></td>
+                <td class="td"><button class="btn-danger" @click="deleteGasto(g.id)">Eliminar</button></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div x-show="showModalGasto" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Agregar gasto fijo</h2>
+          <div class="space-y-3">
+            <div><label class="label">Concepto</label><input class="input" x-model="modalGasto.concepto" placeholder="Alquiler, luz, sueldos..."></div>
+            <div><label class="label">Monto ($)</label><input class="input" type="number" step="0.01" x-model="modalGasto.monto"></div>
+            <div><label class="label">Categoría</label>
+              <select class="input" x-model="modalGasto.categoria">
+                <option value="">Sin categoría</option>
+                <option>Alquiler</option><option>Sueldos</option><option>Servicios</option><option>Marketing</option><option>Mantenimiento</option><option>Otros</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="label">Mes</label><input class="input" type="number" min="1" max="12" x-model="modalGasto.mes"></div>
+              <div><label class="label">Año</label><input class="input" type="number" x-model="modalGasto.anio"></div>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveGasto()">Guardar</button>
+            <button class="btn-secondary" @click="showModalGasto=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROVEEDORES ── -->
+    <div x-show="page==='proveedores'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Proveedores</h1>
+        <button class="btn-primary" @click="modalProv={}; showModalProv=true">+ Nuevo proveedor</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr><th class="th">Nombre</th><th class="th">Contacto</th><th class="th">Teléfono</th><th class="th">Email</th><th class="th">Cond. pago</th><th class="th">Acciones</th></tr></thead>
+          <tbody>
+            <template x-for="p in proveedores" :key="p.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="p.nombre"></td>
+                <td class="td text-slate-400" x-text="p.contacto||'—'"></td>
+                <td class="td text-slate-400" x-text="p.telefono||'—'"></td>
+                <td class="td text-slate-400" x-text="p.email||'—'"></td>
+                <td class="td text-slate-400" x-text="p.condicion_pago||'—'"></td>
+                <td class="td flex gap-2">
+                  <button class="btn-secondary text-xs py-1 px-2" @click="editProv(p)">Editar</button>
+                  <button class="btn-danger" @click="deleteProv(p.id)">Eliminar</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div x-show="showModalProv" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalProv.id ? 'Editar proveedor' : 'Nuevo proveedor'"></h2>
+          <div class="space-y-3">
+            <div><label class="label">Nombre / Razón social</label><input class="input" x-model="modalProv.nombre"></div>
+            <div><label class="label">Contacto</label><input class="input" x-model="modalProv.contacto"></div>
+            <div><label class="label">Teléfono</label><input class="input" x-model="modalProv.telefono"></div>
+            <div><label class="label">Email</label><input class="input" x-model="modalProv.email"></div>
+            <div><label class="label">Condición de pago</label><input class="input" x-model="modalProv.condicion_pago" placeholder="Contado, 30 días, etc."></div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveProv()">Guardar</button>
+            <button class="btn-secondary" @click="showModalProv=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const BASE = '';
+
+function app() {
+  return {
+    token: localStorage.getItem('tueste_token') || '',
+    userName: localStorage.getItem('tueste_name') || '',
+    page: 'dashboard',
+    loginMode: true,
+    loginEmail: 'admin@tueste.com',
+    loginPass: 'tueste2024',
+    regNombre: '', regEmail: '', regPass: '',
+    error: '',
+
+    // Data
+    dash: null, ingredientes: [], productos: [], recetas: [], ventas: [], compras: [],
+    proveedores: [], categorias: [], locales: [], gastos: [], movimientos: [], stockCritico: [],
+    ventasResumen: null, pl: null,
+    plMes: new Date().getMonth() + 1,
+    plAnio: new Date().getFullYear(),
+
+    // Modals
+    showModalIngrediente: false, modalIngrediente: {},
+    showModalProducto: false, modalProducto: {},
+    showModalReceta: false, modalReceta: { items: [] },
+    showVerReceta: false, recetaVista: null,
+    showModalVenta: false, modalVenta: { items: [], canal: 'mostrador', descuento: 0 },
+    showModalOC: false, modalOC: { items: [] },
+    showModalAjuste: false, modalAjuste: {},
+    showModalGasto: false, modalGasto: {},
+    showModalProv: false, modalProv: {},
+    buscarIng: '',
+
+    async init() {
+      if (this.token) {
+        await this.loadMaestros();
+        await this.loadDashboard();
+      }
+    },
+
+    async api(method, path, body) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', ...(this.token ? {'Authorization':'Bearer '+this.token} : {}) },
+      };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(BASE + path, opts);
+      if (res.status === 401) { this.logout(); return null; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error');
+      return data;
+    },
+
+    async doLogin() {
+      this.error = '';
+      try {
+        const d = await this.api('POST', '/api/auth/login', { email: this.loginEmail, password: this.loginPass });
+        if (d) { this.token = d.access_token; this.userName = d.nombre; localStorage.setItem('tueste_token', d.access_token); localStorage.setItem('tueste_name', d.nombre); await this.init(); }
+      } catch(e) { this.error = e.message; }
+    },
+
+    async doRegistro() {
+      this.error = '';
+      try {
+        const d = await this.api('POST', '/api/auth/registro', { nombre: this.regNombre, email: this.regEmail, password: this.regPass });
+        if (d) { this.token = d.access_token; this.userName = d.nombre; localStorage.setItem('tueste_token', d.access_token); localStorage.setItem('tueste_name', d.nombre); await this.init(); }
+      } catch(e) { this.error = e.message; }
+    },
+
+    logout() { this.token = ''; localStorage.removeItem('tueste_token'); localStorage.removeItem('tueste_name'); },
+
+    async loadMaestros() {
+      [this.proveedores, this.categorias, this.locales] = await Promise.all([
+        this.api('GET', '/api/proveedores'),
+        this.api('GET', '/api/categorias'),
+        this.api('GET', '/api/locales'),
+      ]);
+    },
+
+    async loadDashboard() {
+      this.dash = await this.api('GET', '/api/dashboard');
+      this.$nextTick(() => this.renderChart());
+    },
+
+    renderChart() {
+      const ctx = document.getElementById('chartVentas');
+      if (!ctx || !this.dash?.ventas_por_dia) return;
+      if (ctx._chart) ctx._chart.destroy();
+      const labels = this.dash.ventas_por_dia.map(d => d.fecha);
+      const data = this.dash.ventas_por_dia.map(d => d.total);
+      ctx._chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Ventas', data, backgroundColor: '#f59e0b', borderRadius: 6 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$'+v } } } }
+      });
+    },
+
+    // ── Ingredientes ──
+    async loadIngredientes() {
+      this.ingredientes = await this.api('GET', '/api/ingredientes');
+    },
+    ingredientesFiltrados() {
+      if (!this.buscarIng) return this.ingredientes;
+      return this.ingredientes.filter(i => i.nombre.toLowerCase().includes(this.buscarIng.toLowerCase()));
+    },
+    editIngrediente(i) { this.modalIngrediente = {...i}; this.showModalIngrediente = true; },
+    async saveIngrediente() {
+      try {
+        if (this.modalIngrediente.id) await this.api('PUT', '/api/ingredientes/'+this.modalIngrediente.id, this.modalIngrediente);
+        else await this.api('POST', '/api/ingredientes', this.modalIngrediente);
+        this.showModalIngrediente = false;
+        await this.loadIngredientes();
+      } catch(e) { alert(e.message); }
+    },
+    async deleteIngrediente(id) {
+      if (!confirm('¿Eliminar este ingrediente?')) return;
+      await this.api('DELETE', '/api/ingredientes/'+id);
+      await this.loadIngredientes();
+    },
+
+    // ── Productos ──
+    async loadProductos() { this.productos = await this.api('GET', '/api/productos'); },
+    editProducto(p) { this.modalProducto = {...p}; this.showModalProducto = true; },
+    async saveProducto() {
+      try {
+        if (this.modalProducto.id) await this.api('PUT', '/api/productos/'+this.modalProducto.id, this.modalProducto);
+        else await this.api('POST', '/api/productos', this.modalProducto);
+        this.showModalProducto = false;
+        await this.loadProductos();
+      } catch(e) { alert(e.message); }
+    },
+    async deleteProducto(id) {
+      if (!confirm('¿Eliminar?')) return;
+      await this.api('DELETE', '/api/productos/'+id);
+      await this.loadProductos();
+    },
+
+    // ── Recetas ──
+    async loadRecetas() {
+      if (!this.productos.length) await this.loadProductos();
+      if (!this.ingredientes.length) await this.loadIngredientes();
+      this.recetas = await this.api('GET', '/api/recetas');
+    },
+    initModalReceta() { this.modalReceta = { producto_id: '', rendimiento: 1, descripcion: '', items: [] }; this.showModalReceta = true; },
+    calcularCostoPreview() {
+      let costo = 0;
+      for (const item of this.modalReceta.items) {
+        const ing = this.ingredientes.find(i => String(i.id) === String(item.ingrediente_id));
+        if (ing && item.cantidad) costo += ing.costo_actual * parseFloat(item.cantidad);
+      }
+      const rend = parseFloat(this.modalReceta.rendimiento) || 1;
+      return (costo / rend).toFixed(2);
+    },
+    async saveReceta() {
+      try {
+        await this.api('POST', '/api/recetas', this.modalReceta);
+        this.showModalReceta = false;
+        await this.loadRecetas();
+        await this.loadProductos();
+      } catch(e) { alert(e.message); }
+    },
+    verReceta(r) { this.recetaVista = r; this.showVerReceta = true; },
+    async deleteReceta(id) {
+      if (!confirm('¿Eliminar receta?')) return;
+      await this.api('DELETE', '/api/recetas/'+id);
+      await this.loadRecetas();
+    },
+
+    // ── Ventas ──
+    async loadVentas() {
+      if (!this.productos.length) await this.loadProductos();
+      [this.ventas, this.ventasResumen] = await Promise.all([
+        this.api('GET', '/api/ventas'),
+        this.api('GET', '/api/ventas/resumen'),
+      ]);
+    },
+    initModalVenta() { this.modalVenta = { items: [{ producto_id:'', cantidad:1, precio_unitario:0 }], canal:'mostrador', descuento:0 }; this.showModalVenta = true; },
+    setPrecioVenta(item) {
+      const p = this.productos.find(p => String(p.id) === String(item.producto_id));
+      if (p) item.precio_unitario = p.precio_venta;
+    },
+    calcularTotalVenta() {
+      let t = 0;
+      for (const it of this.modalVenta.items) t += (parseFloat(it.precio_unitario)||0) * (parseFloat(it.cantidad)||0);
+      return Math.max(t - (parseFloat(this.modalVenta.descuento)||0), 0).toFixed(2);
+    },
+    async saveVenta() {
+      try {
+        await this.api('POST', '/api/ventas', this.modalVenta);
+        this.showModalVenta = false;
+        await this.loadVentas();
+      } catch(e) { alert(e.message); }
+    },
+
+    // ── Compras ──
+    async loadCompras() {
+      if (!this.proveedores.length) await this.loadMaestros();
+      if (!this.ingredientes.length) await this.loadIngredientes();
+      this.compras = await this.api('GET', '/api/compras');
+    },
+    initModalOC() { this.modalOC = { proveedor_id:'', items:[{ingrediente_id:'',cantidad:1,precio_unitario:0}] }; this.showModalOC = true; },
+    calcularTotalOC() {
+      return this.modalOC.items.reduce((t,it) => t + (parseFloat(it.cantidad)||0)*(parseFloat(it.precio_unitario)||0), 0).toFixed(2);
+    },
+    async saveOC() {
+      try {
+        await this.api('POST', '/api/compras', this.modalOC);
+        this.showModalOC = false;
+        await this.loadCompras();
+      } catch(e) { alert(e.message); }
+    },
+    async recibirOC(id) {
+      const res = await this.api('POST', `/api/compras/${id}/recibir`);
+      if (res) { alert(res.mensaje); await this.loadCompras(); await this.loadIngredientes(); }
+    },
+
+    // ── Stock ──
+    async loadStock() {
+      if (!this.ingredientes.length) await this.loadIngredientes();
+      [this.movimientos, this.stockCritico] = await Promise.all([
+        this.api('GET', '/api/stock/movimientos'),
+        this.api('GET', '/api/ingredientes/stock-critico'),
+      ]);
+    },
+    async saveAjuste() {
+      try {
+        await this.api('POST', '/api/stock/ajuste', this.modalAjuste);
+        this.showModalAjuste = false;
+        await this.loadStock();
+        await this.loadIngredientes();
+      } catch(e) { alert(e.message); }
+    },
+
+    // ── P&L ──
+    async loadPL() {
+      this.pl = await this.api('GET', `/api/dashboard/pl?mes=${this.plMes}&anio=${this.plAnio}`);
+    },
+
+    // ── Gastos ──
+    async loadGastos() {
+      this.gastos = await this.api('GET', `/api/gastos?mes=${this.plMes}&anio=${this.plAnio}`);
+    },
+    async saveGasto() {
+      try {
+        await this.api('POST', '/api/gastos', this.modalGasto);
+        this.showModalGasto = false;
+        await this.loadGastos();
+      } catch(e) { alert(e.message); }
+    },
+    async deleteGasto(id) {
+      if (!confirm('¿Eliminar?')) return;
+      await this.api('DELETE', '/api/gastos/'+id);
+      await this.loadGastos();
+    },
+
+    // ── Proveedores ──
+    async loadProveedores() { this.proveedores = await this.api('GET', '/api/proveedores'); },
+    editProv(p) { this.modalProv = {...p}; this.showModalProv = true; },
+    async saveProv() {
+      try {
+        if (this.modalProv.id) await this.api('PUT', '/api/proveedores/'+this.modalProv.id, this.modalProv);
+        else await this.api('POST', '/api/proveedores', this.modalProv);
+        this.showModalProv = false;
+        await this.loadProveedores();
+      } catch(e) { alert(e.message); }
+    },
+    async deleteProv(id) {
+      if (!confirm('¿Eliminar proveedor?')) return;
+      await this.api('DELETE', '/api/proveedores/'+id);
+      await this.loadProveedores();
+    },
+
+    // ── Utils ──
+    fmt(n) { if (n === null || n === undefined) return '0'; return Number(n).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}); },
+    fmtFecha(s) { if (!s) return '—'; return new Date(s).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); },
+  }
+}
+</script>
+</body>
+</html>
