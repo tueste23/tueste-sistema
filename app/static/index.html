@@ -12,23 +12,23 @@
   .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all; }
   .sidebar-link.active { @apply bg-amber-500 text-white; }
   .sidebar-link:not(.active) { @apply text-slate-300 hover:bg-slate-700 hover:text-white; }
-  .card { @apply bg-slate-800 rounded-2xl shadow-sm border border-slate-700 p-6; }
-  .kpi-card { @apply bg-slate-800 rounded-2xl shadow-sm border border-slate-700 p-5; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6; }
+  .kpi-card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-5; }
   .btn-primary { @apply bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all; }
-  .btn-secondary { @apply bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-all; }
-  .btn-danger { @apply bg-red-900 hover:bg-red-800 text-red-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all; }
-  .input { @apply w-full border border-slate-600 bg-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder-slate-400; }
-  .label { @apply block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wide; }
-  .badge-green { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-300; }
-  .badge-red { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-900 text-red-300; }
-  .badge-yellow { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-900 text-yellow-300; }
-  .badge-blue { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900 text-blue-300; }
-  .table-row { @apply border-b border-slate-700 hover:bg-slate-700 transition-colors; }
-  .th { @apply text-left text-xs font-semibold text-slate-300 uppercase tracking-wider pb-3; }
-  .td { @apply py-3 text-sm text-slate-100; }
+  .btn-secondary { @apply bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-all; }
+  .btn-danger { @apply bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-all; }
+  .input { @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400; }
+  .label { @apply block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide; }
+  .badge-green { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700; }
+  .badge-red { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700; }
+  .badge-yellow { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700; }
+  .badge-blue { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700; }
+  .table-row { @apply border-b border-slate-50 hover:bg-slate-50 transition-colors; }
+  .th { @apply text-left text-xs font-semibold text-slate-500 uppercase tracking-wider pb-3; }
+  .td { @apply py-3 text-sm text-slate-700; }
 </style>
 </head>
-<body class="bg-slate-900 font-sans antialiased" x-data="app()" x-init="init()" x-cloak>
+<body class="bg-slate-50 font-sans antialiased" x-data="app()" x-init="init()" x-cloak>
 
 <!-- ══════════════════ LOGIN ══════════════════ -->
 <div x-show="!token" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
@@ -86,7 +86,7 @@
       <button class="sidebar-link w-full" :class="{'active': page==='dashboard'}" @click="page='dashboard'; loadDashboard()">
         📊 Dashboard
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Operaciones</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Operaciones</div>
       <button class="sidebar-link w-full" :class="{'active': page==='ingredientes'}" @click="page='ingredientes'; loadIngredientes()">
         🧂 Ingredientes
       </button>
@@ -105,14 +105,14 @@
       <button class="sidebar-link w-full" :class="{'active': page==='stock'}" @click="page='stock'; loadStock()">
         📦 Stock
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Finanzas</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Finanzas</div>
       <button class="sidebar-link w-full" :class="{'active': page==='pl'}" @click="page='pl'; loadPL()">
         📈 Estado de Resultados
       </button>
       <button class="sidebar-link w-full" :class="{'active': page==='gastos'}" @click="page='gastos'; loadGastos()">
         💼 Gastos Fijos
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Maestros</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Maestros</div>
       <button class="sidebar-link w-full" :class="{'active': page==='proveedores'}" @click="page='proveedores'; loadProveedores()">
         🏭 Proveedores
       </button>
@@ -131,7 +131,7 @@
     <div x-show="page==='dashboard'" class="p-8">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-slate-100">Dashboard Ejecutivo</h1>
+          <h1 class="text-2xl font-bold text-slate-800">Dashboard Ejecutivo</h1>
           <p class="text-slate-400 text-sm" x-text="'Datos del mes en curso · Actualizado ahora'"></p>
         </div>
         <button class="btn-secondary" @click="loadDashboard()">🔄 Actualizar</button>
@@ -141,14 +141,14 @@
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" x-show="dash">
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ventas del Mes</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_mes)"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_mes)"></p>
           <p class="text-xs mt-1" :class="dash.resumen?.variacion_vs_mes_anterior >= 0 ? 'text-green-600' : 'text-red-500'">
             <span x-text="(dash.resumen?.variacion_vs_mes_anterior >= 0 ? '▲ ' : '▼ ') + Math.abs(dash.resumen?.variacion_vs_mes_anterior) + '% vs mes anterior'"></span>
           </p>
         </div>
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Margen Bruto</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="'$' + fmt(dash.resumen?.margen_bruto)"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.margen_bruto)"></p>
           <p class="text-xs text-slate-400 mt-1" x-text="dash.resumen?.margen_pct + '% sobre ventas'"></p>
         </div>
         <div class="kpi-card">
@@ -158,25 +158,25 @@
         </div>
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ticket Promedio</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="'$' + fmt(dash.resumen?.ticket_promedio)"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.ticket_promedio)"></p>
           <p class="text-xs text-slate-400 mt-1" x-text="dash.resumen?.cantidad_ventas_mes + ' ventas'"></p>
         </div>
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">CMV / Ventas</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="dash.resumen?.cmv_pct + '%'"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="dash.resumen?.cmv_pct + '%'"></p>
           <p class="text-xs text-slate-400 mt-1">Costo mercadería</p>
         </div>
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ventas Hoy</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_hoy)"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_ventas_hoy)"></p>
         </div>
         <div class="kpi-card">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Compras del Mes</p>
-          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="'$' + fmt(dash.resumen?.total_compras_mes)"></p>
+          <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$' + fmt(dash.resumen?.total_compras_mes)"></p>
         </div>
         <div class="kpi-card" :class="dash.resumen?.stock_critico_count > 0 ? 'border-red-200 bg-red-50' : ''">
           <p class="text-xs font-semibold uppercase tracking-wide" :class="dash.resumen?.stock_critico_count > 0 ? 'text-red-400' : 'text-slate-400'">Stock Crítico</p>
-          <p class="text-2xl font-bold mt-1" :class="dash.resumen?.stock_critico_count > 0 ? 'text-red-600' : 'text-slate-100'" x-text="dash.resumen?.stock_critico_count + ' ingredientes'"></p>
+          <p class="text-2xl font-bold mt-1" :class="dash.resumen?.stock_critico_count > 0 ? 'text-red-600' : 'text-slate-800'" x-text="dash.resumen?.stock_critico_count + ' ingredientes'"></p>
         </div>
       </div>
 
@@ -193,7 +193,7 @@
             <template x-for="p in (dash.top_productos || []).slice(0,8)" :key="p.nombre">
               <div class="flex items-center justify-between py-1">
                 <span class="text-sm text-slate-600 truncate mr-2" x-text="p.nombre"></span>
-                <span class="text-sm font-semibold text-slate-100 flex-shrink-0" x-text="'$'+fmt(p.ventas)"></span>
+                <span class="text-sm font-semibold text-slate-800 flex-shrink-0" x-text="'$'+fmt(p.ventas)"></span>
               </div>
             </template>
           </div>
@@ -228,7 +228,7 @@
     <!-- ── INGREDIENTES ── -->
     <div x-show="page==='ingredientes'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Ingredientes / Insumos</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Ingredientes / Insumos</h1>
         <button class="btn-primary" @click="modalIngrediente={}; showModalIngrediente=true">+ Nuevo ingrediente</button>
       </div>
       <div class="card">
@@ -267,8 +267,8 @@
       </div>
       <!-- Modal ingrediente -->
       <div x-show="showModalIngrediente" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4" x-text="modalIngrediente.id ? 'Editar ingrediente' : 'Nuevo ingrediente'"></h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalIngrediente.id ? 'Editar ingrediente' : 'Nuevo ingrediente'"></h2>
           <div class="space-y-3">
             <div><label class="label">Nombre</label><input class="input" x-model="modalIngrediente.nombre"></div>
             <div><label class="label">Unidad (kg, litro, unidad, g, ml...)</label><input class="input" x-model="modalIngrediente.unidad"></div>
@@ -293,7 +293,7 @@
     <!-- ── PRODUCTOS ── -->
     <div x-show="page==='productos'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Productos</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Productos</h1>
         <button class="btn-primary" @click="modalProducto={}; showModalProducto=true">+ Nuevo producto</button>
       </div>
       <div class="card">
@@ -334,8 +334,8 @@
       </div>
       <!-- Modal producto -->
       <div x-show="showModalProducto" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4" x-text="modalProducto.id ? 'Editar producto' : 'Nuevo producto'"></h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalProducto.id ? 'Editar producto' : 'Nuevo producto'"></h2>
           <div class="space-y-3">
             <div><label class="label">Nombre</label><input class="input" x-model="modalProducto.nombre"></div>
             <div><label class="label">Descripción</label><input class="input" x-model="modalProducto.descripcion"></div>
@@ -358,7 +358,7 @@
     <!-- ── RECETAS ── -->
     <div x-show="page==='recetas'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Recetas</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Recetas</h1>
         <button class="btn-primary" @click="initModalReceta()">+ Nueva receta</button>
       </div>
       <div class="card">
@@ -395,8 +395,8 @@
 
       <!-- Modal nueva receta -->
       <div x-show="showModalReceta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto py-8">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4">Nueva receta</h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nueva receta</h2>
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div><label class="label">Producto</label>
               <select class="input" x-model="modalReceta.producto_id">
@@ -448,8 +448,8 @@
 
       <!-- Modal ver receta -->
       <div x-show="showVerReceta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-xl shadow-2xl" x-show="recetaVista">
-          <h2 class="font-bold text-lg text-slate-100 mb-1" x-text="recetaVista?.producto"></h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-xl shadow-2xl" x-show="recetaVista">
+          <h2 class="font-bold text-lg text-slate-800 mb-1" x-text="recetaVista?.producto"></h2>
           <p class="text-sm text-slate-400 mb-4" x-text="recetaVista?.descripcion"></p>
           <table class="w-full mb-4">
             <thead><tr><th class="th">Ingrediente</th><th class="th">Cantidad</th><th class="th">Costo</th></tr></thead>
@@ -477,16 +477,16 @@
     <!-- ── VENTAS ── -->
     <div x-show="page==='ventas'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Ventas</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Ventas</h1>
         <button class="btn-primary" @click="initModalVenta()">+ Registrar venta</button>
       </div>
 
       <!-- Resumen rápido -->
       <div class="grid grid-cols-4 gap-4 mb-6" x-show="ventasResumen">
-        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ventas mes</p><p class="text-xl font-bold text-slate-100 mt-1" x-text="'$'+fmt(ventasResumen?.total_ventas)"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ventas mes</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(ventasResumen?.total_ventas)"></p></div>
         <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Margen bruto</p><p class="text-xl font-bold mt-1 text-green-600" x-text="'$'+fmt(ventasResumen?.margen_bruto)"></p></div>
-        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Margen %</p><p class="text-xl font-bold text-slate-100 mt-1" x-text="ventasResumen?.margen_pct+'%'"></p></div>
-        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ticket promedio</p><p class="text-xl font-bold text-slate-100 mt-1" x-text="'$'+fmt(ventasResumen?.ticket_promedio)"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Margen %</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="ventasResumen?.margen_pct+'%'"></p></div>
+        <div class="kpi-card"><p class="text-xs text-slate-400 uppercase font-semibold tracking-wide">Ticket promedio</p><p class="text-xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(ventasResumen?.ticket_promedio)"></p></div>
       </div>
 
       <div class="card">
@@ -518,8 +518,8 @@
 
       <!-- Modal venta -->
       <div x-show="showModalVenta" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 py-8 overflow-y-auto">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4">Registrar venta</h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Registrar venta</h2>
           <div class="grid grid-cols-2 gap-3 mb-4">
             <div><label class="label">Canal</label>
               <select class="input" x-model="modalVenta.canal">
@@ -565,7 +565,7 @@
     <!-- ── COMPRAS ── -->
     <div x-show="page==='compras'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Órdenes de Compra</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Órdenes de Compra</h1>
         <button class="btn-primary" @click="initModalOC()">+ Nueva OC</button>
       </div>
       <div class="card">
@@ -600,8 +600,8 @@
 
       <!-- Modal OC -->
       <div x-show="showModalOC" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 py-8 overflow-y-auto">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4">Nueva Orden de Compra</h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nueva Orden de Compra</h2>
           <div class="mb-4">
             <label class="label">Proveedor</label>
             <select class="input" x-model="modalOC.proveedor_id">
@@ -642,7 +642,7 @@
     <!-- ── STOCK ── -->
     <div x-show="page==='stock'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Inventario / Stock</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Inventario / Stock</h1>
         <button class="btn-primary" @click="showModalAjuste=true; modalAjuste={}">Ajuste manual de stock</button>
       </div>
       <div class="grid grid-cols-2 gap-6 mb-6">
@@ -673,8 +673,8 @@
       </div>
       <!-- Modal ajuste -->
       <div x-show="showModalAjuste" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4">Ajuste de stock</h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Ajuste de stock</h2>
           <div class="space-y-3">
             <div><label class="label">Ingrediente</label>
               <select class="input" x-model="modalAjuste.ingrediente_id">
@@ -700,7 +700,7 @@
     <!-- ── P&L ── -->
     <div x-show="page==='pl'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Estado de Resultados</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Estado de Resultados</h1>
         <div class="flex gap-2">
           <select class="input w-24" x-model="plMes" @change="loadPL()">
             <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m"><option :value="m" x-text="['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m-1]"></option></template>
@@ -712,7 +712,7 @@
         <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest mb-4">Período: <span x-text="pl?.periodo"></span></h3>
         <div class="space-y-2">
           <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="font-semibold text-slate-100">Ventas netas</span>
+            <span class="font-semibold text-slate-800">Ventas netas</span>
             <span class="font-bold text-green-600 text-lg" x-text="'$'+fmt(pl?.ingresos?.ventas)"></span>
           </div>
           <div class="flex justify-between py-2 border-b border-slate-100">
@@ -720,8 +720,8 @@
             <span class="text-red-500" x-text="'-$'+fmt(pl?.costo_mercaderia)"></span>
           </div>
           <div class="flex justify-between py-3 border-b-2 border-slate-300 bg-slate-50 px-2 rounded">
-            <span class="font-bold text-slate-100">= Margen Bruto</span>
-            <span class="font-bold text-slate-100 text-lg" x-text="'$'+fmt(pl?.margen_bruto) + ' ('+pl?.margen_bruto_pct+'%)'"></span>
+            <span class="font-bold text-slate-800">= Margen Bruto</span>
+            <span class="font-bold text-slate-800 text-lg" x-text="'$'+fmt(pl?.margen_bruto) + ' ('+pl?.margen_bruto_pct+'%)'"></span>
           </div>
           <div class="pt-2">
             <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Gastos operativos</p>
@@ -747,7 +747,7 @@
     <!-- ── GASTOS ── -->
     <div x-show="page==='gastos'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Gastos Fijos</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Gastos Fijos</h1>
         <button class="btn-primary" @click="modalGasto={}; showModalGasto=true">+ Agregar gasto</button>
       </div>
       <div class="card">
@@ -759,7 +759,7 @@
                 <td class="td font-medium" x-text="g.concepto"></td>
                 <td class="td text-slate-400" x-text="g.categoria || '—'"></td>
                 <td class="td text-slate-400" x-text="g.mes+'/'+g.anio"></td>
-                <td class="td font-bold text-slate-100" x-text="'$'+fmt(g.monto)"></td>
+                <td class="td font-bold text-slate-800" x-text="'$'+fmt(g.monto)"></td>
                 <td class="td"><button class="btn-danger" @click="deleteGasto(g.id)">Eliminar</button></td>
               </tr>
             </template>
@@ -767,8 +767,8 @@
         </table>
       </div>
       <div x-show="showModalGasto" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4">Agregar gasto fijo</h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Agregar gasto fijo</h2>
           <div class="space-y-3">
             <div><label class="label">Concepto</label><input class="input" x-model="modalGasto.concepto" placeholder="Alquiler, luz, sueldos..."></div>
             <div><label class="label">Monto ($)</label><input class="input" type="number" step="0.01" x-model="modalGasto.monto"></div>
@@ -794,7 +794,7 @@
     <!-- ── PROVEEDORES ── -->
     <div x-show="page==='proveedores'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-100">Proveedores</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Proveedores</h1>
         <button class="btn-primary" @click="modalProv={}; showModalProv=true">+ Nuevo proveedor</button>
       </div>
       <div class="card">
@@ -818,8 +818,8 @@
         </table>
       </div>
       <div x-show="showModalProv" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-100 mb-4" x-text="modalProv.id ? 'Editar proveedor' : 'Nuevo proveedor'"></h2>
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalProv.id ? 'Editar proveedor' : 'Nuevo proveedor'"></h2>
           <div class="space-y-3">
             <div><label class="label">Nombre / Razón social</label><input class="input" x-model="modalProv.nombre"></div>
             <div><label class="label">Contacto</label><input class="input" x-model="modalProv.contacto"></div>
