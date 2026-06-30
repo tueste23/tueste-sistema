@@ -11,7 +11,7 @@
   [x-cloak] { display: none !important; }
   .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all; }
   .sidebar-link.active { @apply bg-amber-500 text-white; }
-  .sidebar-link:not(.active) { @apply text-slate-300 hover:bg-slate-700 hover:text-white; }
+  .sidebar-link:not(.active) { @apply text-white hover:bg-slate-700 hover:text-white; }
   .card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6; }
   .kpi-card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-5; }
   .btn-primary { @apply bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all; }
@@ -80,13 +80,13 @@
   <aside class="w-64 bg-slate-900 flex flex-col flex-shrink-0">
     <div class="px-6 py-5 border-b border-slate-700">
       <div class="text-2xl font-black text-amber-400">☕ TUESTE</div>
-      <div class="text-xs text-slate-400 mt-0.5" x-text="userName"></div>
+      <div class="text-xs text-white mt-0.5" x-text="userName"></div>
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       <button class="sidebar-link w-full" :class="{'active': page==='dashboard'}" @click="page='dashboard'; loadDashboard()">
         📊 Dashboard
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Operaciones</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-white uppercase tracking-wider font-semibold">Operaciones</div>
       <button class="sidebar-link w-full" :class="{'active': page==='ingredientes'}" @click="page='ingredientes'; loadIngredientes()">
         🧂 Ingredientes
       </button>
@@ -105,14 +105,14 @@
       <button class="sidebar-link w-full" :class="{'active': page==='stock'}" @click="page='stock'; loadStock()">
         📦 Stock
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Finanzas</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-white uppercase tracking-wider font-semibold">Finanzas</div>
       <button class="sidebar-link w-full" :class="{'active': page==='pl'}" @click="page='pl'; loadPL()">
         📈 Estado de Resultados
       </button>
       <button class="sidebar-link w-full" :class="{'active': page==='gastos'}" @click="page='gastos'; loadGastos()">
         💼 Gastos Fijos
       </button>
-      <div class="pt-2 pb-1 px-4 text-xs text-slate-300 uppercase tracking-wider font-semibold">Maestros</div>
+      <div class="pt-2 pb-1 px-4 text-xs text-white uppercase tracking-wider font-semibold">Maestros</div>
       <button class="sidebar-link w-full" :class="{'active': page==='proveedores'}" @click="page='proveedores'; loadProveedores()">
         🏭 Proveedores
       </button>
