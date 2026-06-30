@@ -885,9 +885,9 @@ function app() {
       };
       if (body) opts.body = JSON.stringify(body);
       const res = await fetch(BASE + path, opts);
-      if (res.status === 401) { this.logout(); return null; }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Error');
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && path !== '/api/auth/login') { this.logout(); return null; }
+      if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
       return data;
     },
 
