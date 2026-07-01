@@ -20,6 +20,7 @@ class VentaCreate(BaseModel):
     canal: str = "mostrador"
     descuento: float = 0.0
     notas: Optional[str] = None
+    fecha: Optional[date] = None   # si se omite, usa la fecha actual
     items: List[ItemVentaIn]
 
 @router.get("")
@@ -138,6 +139,7 @@ def crear(data: VentaCreate, db: Session = Depends(get_db), current_user=Depends
         items_preparados.append((prod, item_data.cantidad, precio, costo_unit, subtotal))
 
     total_final = max(total - data.descuento, 0)
+    fecha_venta = datetime.combine(data.fecha, datetime.min.time()) if data.fecha else datetime.utcnow()
     venta = models.Venta(
         local_id=data.local_id,
         canal=data.canal,
@@ -146,6 +148,7 @@ def crear(data: VentaCreate, db: Session = Depends(get_db), current_user=Depends
         descuento=data.descuento,
         notas=data.notas,
         usuario_id=current_user.id,
+        fecha=fecha_venta,
     )
     db.add(venta)
     db.flush()
