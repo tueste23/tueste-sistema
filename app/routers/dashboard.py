@@ -145,32 +145,66 @@ def estado_resultados(mes: int = None, anio: int = None,
     mes = mes or ahora.month
     anio = anio or ahora.year
 
+    # ── Ventas ──
     ventas = db.query(models.Venta).filter(
         extract('month', models.Venta.fecha) == mes,
         extract('year', models.Venta.fecha) == anio,
     ).all()
     total_ventas = sum(v.total for v in ventas)
-    costo_mercaderia = sum(v.costo_total for v in ventas)
+
+    # ── CMV: desde recetas (ventas diarias) + materia prima de gastos variables (histórico) ──
+    cmv_recetas = sum(v.costo_total for v in ventas)
+
+    # ── Gastos variables ──
+    gv = db.query(models.GastoVariable).filter(
+        models.GastoVariable.mes == mes,
+        models.GastoVariable.anio == anio,
+    ).all()
+
+    # CMV histórico = materia prima de gastos variables (si no hay CMV de recetas)
+    cmv_mp = sum(g.monto for g in gv if g.categoria == "materia_prima")
+    costo_mercaderia = cmv_recetas if cmv_recetas > 0 else cmv_mp
+
     margen_bruto = total_ventas - costo_mercaderia
 
-    gastos = db.query(models.GastoFijo).filter(
+    # Gastos variables agrupados (excluye materia_prima si ya se usó como CMV)
+    gv_por_cat = {}
+    for g in gv:
+        # Si la materia prima ya fue usada como CMV, no duplicar
+        if cmv_recetas > 0 and g.categoria == "materia_prima":
+            continue
+        # Si la materia prima fue usada como CMV histórico, no la incluir de nuevo en gastos
+        if cmv_recetas == 0 and g.categoria == "materia_prima":
+            continue
+        cat = g.categoria or "operativo"
+        gv_por_cat[cat] = gv_por_cat.get(cat, 0) + g.monto
+    total_gv = sum(gv_por_cat.values())
+
+    # ── Gastos fijos ──
+    gf = db.query(models.GastoFijo).filter(
         models.GastoFijo.mes == mes,
         models.GastoFijo.anio == anio,
     ).all()
-    gastos_por_cat = {}
-    for g in gastos:
-        cat = g.categoria or "Otros"
-        gastos_por_cat[cat] = gastos_por_cat.get(cat, 0) + g.monto
-    total_gastos = sum(g.monto for g in gastos)
+    gf_por_cat = {}
+    for g in gf:
+        cat = g.categoria or "varios"
+        gf_por_cat[cat] = gf_por_cat.get(cat, 0) + g.monto
+    total_gf = sum(g.monto for g in gf)
+
+    total_gastos = total_gv + total_gf
     resultado = margen_bruto - total_gastos
 
     return {
         "periodo": f"{mes}/{anio}",
         "ingresos": {"ventas": round(total_ventas, 2)},
         "costo_mercaderia": round(costo_mercaderia, 2),
+        "costo_mp_historico": round(cmv_mp, 2),
         "margen_bruto": round(margen_bruto, 2),
         "margen_bruto_pct": round(margen_bruto / total_ventas * 100, 1) if total_ventas > 0 else 0,
-        "gastos_operativos": {k: round(v, 2) for k, v in gastos_por_cat.items()},
+        "gastos_variables": {k: round(v, 2) for k, v in gv_por_cat.items()},
+        "total_gastos_variables": round(total_gv, 2),
+        "gastos_fijos": {k: round(v, 2) for k, v in gf_por_cat.items()},
+        "total_gastos_fijos": round(total_gf, 2),
         "total_gastos": round(total_gastos, 2),
         "resultado_neto": round(resultado, 2),
         "rentabilidad_pct": round(resultado / total_ventas * 100, 1) if total_ventas > 0 else 0,

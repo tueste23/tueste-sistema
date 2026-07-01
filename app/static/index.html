@@ -729,31 +729,55 @@
       <div class="card max-w-2xl" x-show="pl">
         <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest mb-4">Período: <span x-text="pl?.periodo"></span></h3>
         <div class="space-y-2">
+          <!-- Ventas -->
           <div class="flex justify-between py-2 border-b border-slate-100">
             <span class="font-semibold text-slate-800">Ventas netas</span>
             <span class="font-bold text-green-600 text-lg" x-text="'$'+fmt(pl?.ingresos?.ventas)"></span>
           </div>
+          <!-- CMV -->
           <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">(-) Costo de mercadería (CMV)</span>
+            <span class="text-slate-500">(-) Costo de mercadería / Materia prima</span>
             <span class="text-red-500" x-text="'-$'+fmt(pl?.costo_mercaderia)"></span>
           </div>
+          <!-- Margen bruto -->
           <div class="flex justify-between py-3 border-b-2 border-slate-300 bg-slate-50 px-2 rounded">
             <span class="font-bold text-slate-800">= Margen Bruto</span>
             <span class="font-bold text-slate-800 text-lg" x-text="'$'+fmt(pl?.margen_bruto) + ' ('+pl?.margen_bruto_pct+'%)'"></span>
           </div>
-          <div class="pt-2">
-            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Gastos operativos</p>
-            <template x-for="[cat, monto] in Object.entries(pl?.gastos_operativos || {})" :key="cat">
-              <div class="flex justify-between py-1.5">
+          <!-- Gastos variables -->
+          <div class="pt-2" x-show="Object.keys(pl?.gastos_variables || {}).length > 0">
+            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Gastos variables</p>
+            <template x-for="[cat, monto] in Object.entries(pl?.gastos_variables || {})" :key="cat">
+              <div class="flex justify-between py-1.5 pl-3">
                 <span class="text-slate-500 text-sm" x-text="cat"></span>
                 <span class="text-slate-600 text-sm" x-text="'-$'+fmt(monto)"></span>
               </div>
             </template>
+            <div class="flex justify-between py-1.5 border-t border-slate-100 mt-1">
+              <span class="text-slate-500 text-sm font-medium">Subtotal variables</span>
+              <span class="text-slate-600 text-sm font-medium" x-text="'-$'+fmt(pl?.total_gastos_variables)"></span>
+            </div>
           </div>
-          <div class="flex justify-between py-2 border-t border-slate-100">
-            <span class="text-slate-500">Total gastos operativos</span>
-            <span class="text-red-500" x-text="'-$'+fmt(pl?.total_gastos)"></span>
+          <!-- Gastos fijos -->
+          <div class="pt-2" x-show="Object.keys(pl?.gastos_fijos || {}).length > 0">
+            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Gastos fijos</p>
+            <template x-for="[cat, monto] in Object.entries(pl?.gastos_fijos || {})" :key="cat">
+              <div class="flex justify-between py-1.5 pl-3">
+                <span class="text-slate-500 text-sm" x-text="cat"></span>
+                <span class="text-slate-600 text-sm" x-text="'-$'+fmt(monto)"></span>
+              </div>
+            </template>
+            <div class="flex justify-between py-1.5 border-t border-slate-100 mt-1">
+              <span class="text-slate-500 text-sm font-medium">Subtotal fijos</span>
+              <span class="text-slate-600 text-sm font-medium" x-text="'-$'+fmt(pl?.total_gastos_fijos)"></span>
+            </div>
           </div>
+          <!-- Total gastos -->
+          <div class="flex justify-between py-2 border-t-2 border-slate-300">
+            <span class="text-slate-600 font-semibold">Total gastos</span>
+            <span class="text-red-500 font-semibold" x-text="'-$'+fmt(pl?.total_gastos)"></span>
+          </div>
+          <!-- Resultado -->
           <div class="flex justify-between py-4 bg-slate-800 text-white px-4 rounded-xl mt-2">
             <span class="font-bold text-lg">RESULTADO NETO</span>
             <span class="font-black text-xl" :class="pl?.resultado_neto >= 0 ? 'text-green-400' : 'text-red-400'" x-text="'$'+fmt(pl?.resultado_neto) + ' ('+pl?.rentabilidad_pct+'%)'"></span>
