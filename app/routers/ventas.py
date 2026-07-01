@@ -115,6 +115,15 @@ def obtener(id: int, db: Session = Depends(get_db), current_user=Depends(get_cur
         ],
     }
 
+@router.delete("/{id}")
+def eliminar(id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    v = db.query(models.Venta).filter(models.Venta.id == id).first()
+    if not v:
+        raise HTTPException(404, "Venta no encontrada")
+    db.delete(v)
+    db.commit()
+    return {"ok": True}
+
 @router.post("")
 def crear(data: VentaCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """
