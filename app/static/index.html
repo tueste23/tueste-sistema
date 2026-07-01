@@ -114,6 +114,22 @@
       <button class="sidebar-link w-full" :class="{'active': page==='gastos'}" @click="page='gastos'; loadGastos()">
         💼 Gastos Fijos
       </button>
+      <div class="pt-2 pb-1 px-4 text-xs text-white uppercase tracking-wider font-semibold">Centro de Producción</div>
+      <button class="sidebar-link w-full" :class="{'active': page==='clientes'}" @click="page='clientes'; loadClientes()">
+        👥 Clientes
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='pedidos'}" @click="page='pedidos'; loadPedidos()">
+        📦 Pedidos
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='produccion'}" @click="page='produccion'; loadProduccion()">
+        🏭 Producción Diaria
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='gastos_var'}" @click="page='gastos_var'; loadGastosVar()">
+        🔧 Gastos Variables
+      </button>
+      <button class="sidebar-link w-full" :class="{'active': page==='cmv'}" @click="page='cmv'; loadCMV()">
+        📊 CMV Teórico vs Real
+      </button>
       <div class="pt-2 pb-1 px-4 text-xs text-white uppercase tracking-wider font-semibold">Maestros</div>
       <button class="sidebar-link w-full" :class="{'active': page==='proveedores'}" @click="page='proveedores'; loadProveedores()">
         🏭 Proveedores
@@ -837,6 +853,595 @@
       </div>
     </div>
 
+    <!-- ── CLIENTES ── -->
+    <div x-show="page==='clientes'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Clientes</h1>
+          <p class="text-slate-400 text-sm">Perfiles y cuenta corriente</p>
+        </div>
+        <div class="flex gap-3">
+          <button class="btn-secondary" @click="page='alertas_deuda'; loadAlertasDeuda()">⚠️ Ver deudas</button>
+          <button class="btn-primary" @click="modalCliente={}; showModalCliente=true">+ Nuevo cliente</button>
+        </div>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Nombre</th><th class="th">Tipo</th><th class="th">Teléfono</th>
+            <th class="th">Saldo deuda</th><th class="th">Límite crédito</th><th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="c in clientes" :key="c.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="c.nombre"></td>
+                <td class="td"><span :class="c.tipo==='interno' ? 'badge-blue' : 'badge-green'" x-text="c.tipo"></span></td>
+                <td class="td text-slate-500" x-text="c.telefono || '—'"></td>
+                <td class="td"><span :class="c.saldo > 0 ? 'badge-red' : 'badge-green'" x-text="'$'+fmt(c.saldo)"></span></td>
+                <td class="td text-slate-500" x-text="c.limite_credito > 0 ? '$'+fmt(c.limite_credito) : 'Sin límite'"></td>
+                <td class="td">
+                  <button class="btn-secondary text-xs mr-1" @click="verCuentaCorriente(c)">Cuenta corriente</button>
+                  <button class="btn-secondary text-xs mr-1" @click="modalCliente={...c}; showModalCliente=true">Editar</button>
+                  <button class="btn-danger" @click="deleteCliente(c.id)">Eliminar</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal cuenta corriente -->
+      <div x-show="showCuentaCorriente" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg text-slate-800" x-text="clienteActual?.nombre + ' — Cuenta Corriente'"></h2>
+            <span :class="clienteActual?.saldo > 0 ? 'badge-red text-base' : 'badge-green text-base'" x-text="'Saldo: $'+fmt(clienteActual?.saldo)"></span>
+          </div>
+          <div class="mb-4 p-4 bg-slate-50 rounded-xl">
+            <p class="text-sm font-semibold text-slate-700 mb-2">Registrar movimiento</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="label">Tipo</label>
+                <select class="input" x-model="nuevoMovimiento.tipo">
+                  <option value="pago">Pago</option>
+                  <option value="cargo">Cargo extra</option>
+                  <option value="nota_credito">Nota de crédito</option>
+                </select>
+              </div>
+              <div><label class="label">Monto</label><input class="input" type="number" x-model="nuevoMovimiento.monto" placeholder="0"></div>
+              <div><label class="label">Descripción</label><input class="input" x-model="nuevoMovimiento.descripcion" placeholder="Motivo"></div>
+            </div>
+            <button class="btn-primary mt-3" @click="registrarMovimiento()">Registrar</button>
+          </div>
+          <table class="w-full text-sm">
+            <thead><tr><th class="th">Fecha</th><th class="th">Tipo</th><th class="th">Descripción</th><th class="th text-right">Monto</th></tr></thead>
+            <tbody>
+              <template x-for="m in clienteActual?.movimientos || []" :key="m.id">
+                <tr class="table-row">
+                  <td class="td text-slate-500 text-xs" x-text="fmtFecha(m.fecha)"></td>
+                  <td class="td"><span :class="m.tipo==='pago'||m.tipo==='nota_credito' ? 'badge-green' : 'badge-red'" x-text="m.tipo"></span></td>
+                  <td class="td" x-text="m.descripcion || '—'"></td>
+                  <td class="td text-right font-medium" :class="m.tipo==='cargo'?'text-red-600':'text-green-600'" x-text="'$'+fmt(m.monto)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <button class="btn-secondary mt-4 w-full" @click="showCuentaCorriente=false">Cerrar</button>
+        </div>
+      </div>
+
+      <!-- Modal nuevo/editar cliente -->
+      <div x-show="showModalCliente" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4" x-text="modalCliente.id ? 'Editar cliente' : 'Nuevo cliente'"></h2>
+          <div class="space-y-3">
+            <div><label class="label">Nombre</label><input class="input" x-model="modalCliente.nombre"></div>
+            <div>
+              <label class="label">Tipo</label>
+              <select class="input" x-model="modalCliente.tipo">
+                <option value="externo">Externo</option>
+                <option value="interno">Interno (Tueste)</option>
+              </select>
+            </div>
+            <div><label class="label">Contacto</label><input class="input" x-model="modalCliente.contacto"></div>
+            <div><label class="label">Teléfono</label><input class="input" x-model="modalCliente.telefono"></div>
+            <div><label class="label">Email</label><input class="input" type="email" x-model="modalCliente.email"></div>
+            <div><label class="label">Dirección</label><input class="input" x-model="modalCliente.direccion"></div>
+            <div><label class="label">Límite crédito ($)</label><input class="input" type="number" x-model="modalCliente.limite_credito" placeholder="0"></div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveCliente()">Guardar</button>
+            <button class="btn-secondary" @click="showModalCliente=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PEDIDOS ── -->
+    <div x-show="page==='pedidos'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Pedidos</h1>
+          <p class="text-slate-400 text-sm">Gestión de pedidos por cliente</p>
+        </div>
+        <button class="btn-primary" @click="initModalPedido()">+ Nuevo pedido</button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="flex gap-3 mb-4">
+        <button class="btn-secondary text-xs" :class="filtroPedido==='' ? 'bg-amber-100' : ''" @click="filtroPedido=''; loadPedidos()">Todos</button>
+        <button class="btn-secondary text-xs" :class="filtroPedido==='pendiente' ? 'bg-amber-100' : ''" @click="filtroPedido='pendiente'; loadPedidos()">Pendientes</button>
+        <button class="btn-secondary text-xs" :class="filtroPedido==='en_produccion' ? 'bg-amber-100' : ''" @click="filtroPedido='en_produccion'; loadPedidos()">En producción</button>
+        <button class="btn-secondary text-xs" :class="filtroPedido==='entregado' ? 'bg-amber-100' : ''" @click="filtroPedido='entregado'; loadPedidos()">Entregados</button>
+        <button class="btn-secondary text-xs" :class="filtroPedido==='parcial' ? 'bg-amber-100' : ''" @click="filtroPedido='parcial'; loadPedidos()">Parciales</button>
+      </div>
+
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">#</th><th class="th">Cliente</th><th class="th">Fecha pedido</th>
+            <th class="th">Entrega</th><th class="th">Estado</th>
+            <th class="th">Total</th><th class="th">Cobrado</th><th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="p in pedidos" :key="p.id">
+              <tr class="table-row">
+                <td class="td text-slate-400 text-xs" x-text="'#'+p.id"></td>
+                <td class="td font-medium" x-text="p.cliente"></td>
+                <td class="td text-slate-500 text-xs" x-text="fmtFecha(p.fecha_pedido)"></td>
+                <td class="td text-slate-500 text-xs" x-text="p.fecha_entrega ? fmtFecha(p.fecha_entrega) : '—'"></td>
+                <td class="td">
+                  <span :class="{
+                    'badge-yellow': p.estado==='pendiente',
+                    'badge-blue': p.estado==='en_produccion',
+                    'badge-green': p.estado==='entregado',
+                    'badge-red': p.estado==='cancelado',
+                    'badge-yellow': p.estado==='parcial'
+                  }" x-text="p.estado"></span>
+                </td>
+                <td class="td font-medium" x-text="'$'+fmt(p.total)"></td>
+                <td class="td" :class="p.pendiente_cobro > 0 ? 'text-red-600' : 'text-green-600'" x-text="'$'+fmt(p.monto_pagado)"></td>
+                <td class="td">
+                  <button class="btn-secondary text-xs mr-1" @click="verPedido(p.id)">Ver</button>
+                  <template x-if="p.estado !== 'entregado' && p.estado !== 'cancelado'">
+                    <button class="btn-danger" @click="cancelarPedido(p.id)">Cancelar</button>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal ver pedido -->
+      <div x-show="showVerPedido" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg text-slate-800" x-text="'Pedido #' + pedidoActual?.id + ' — ' + pedidoActual?.cliente"></h2>
+            <span class="badge-blue" x-text="pedidoActual?.estado"></span>
+          </div>
+          <template x-if="pedidoActual">
+            <div>
+              <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
+                <div><p class="label">Total</p><p class="font-bold text-slate-800" x-text="'$'+fmt(pedidoActual.total)"></p></div>
+                <div><p class="label">Cobrado</p><p class="font-bold text-green-600" x-text="'$'+fmt(pedidoActual.monto_pagado)"></p></div>
+                <div><p class="label">Pendiente cobro</p><p class="font-bold text-red-600" x-text="'$'+fmt(pedidoActual.total - pedidoActual.monto_pagado)"></p></div>
+              </div>
+              <table class="w-full text-sm mb-4">
+                <thead><tr><th class="th">Producto</th><th class="th">Pedido</th><th class="th">Entregado</th><th class="th">Pendiente</th><th class="th text-right">Subtotal</th></tr></thead>
+                <tbody>
+                  <template x-for="it in pedidoActual.items" :key="it.id">
+                    <tr class="table-row">
+                      <td class="td" x-text="it.producto"></td>
+                      <td class="td" x-text="it.cantidad"></td>
+                      <td class="td text-green-600" x-text="it.cantidad_entregada"></td>
+                      <td class="td text-red-600" x-text="it.pendiente"></td>
+                      <td class="td text-right" x-text="'$'+fmt(it.subtotal)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <div class="flex gap-3 flex-wrap">
+                <template x-if="pedidoActual.estado !== 'entregado' && pedidoActual.estado !== 'cancelado'">
+                  <button class="btn-primary text-xs" @click="cambiarEstadoPedido('en_produccion')">▶ En producción</button>
+                </template>
+                <template x-if="pedidoActual.estado !== 'entregado' && pedidoActual.estado !== 'cancelado'">
+                  <button class="btn-primary text-xs" @click="cambiarEstadoPedido('entregado')">✓ Marcar entregado</button>
+                </template>
+                <button class="btn-secondary text-xs" @click="pagarPedidoModal=true">💰 Registrar pago</button>
+              </div>
+              <div x-show="pagarPedidoModal" class="mt-4 p-4 bg-slate-50 rounded-xl">
+                <p class="text-sm font-semibold mb-2">Registrar pago</p>
+                <div class="flex gap-3">
+                  <input class="input" type="number" x-model="montoPago" placeholder="Monto">
+                  <button class="btn-primary" @click="registrarPagoPedido()">Confirmar</button>
+                  <button class="btn-secondary" @click="pagarPedidoModal=false">Cancelar</button>
+                </div>
+              </div>
+            </div>
+          </template>
+          <button class="btn-secondary mt-4 w-full" @click="showVerPedido=false">Cerrar</button>
+        </div>
+      </div>
+
+      <!-- Modal nuevo pedido -->
+      <div x-show="showModalPedido" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nuevo Pedido</h2>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="label">Cliente</label>
+              <select class="input" x-model="modalPedido.cliente_id">
+                <option value="">— Seleccionar —</option>
+                <template x-for="c in clientes" :key="c.id"><option :value="c.id" x-text="c.nombre"></option></template>
+              </select>
+            </div>
+            <div><label class="label">Fecha de entrega</label><input class="input" type="datetime-local" x-model="modalPedido.fecha_entrega"></div>
+            <div class="col-span-2"><label class="label">Notas</label><input class="input" x-model="modalPedido.notas" placeholder="Indicaciones especiales"></div>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700 mb-2">Items del pedido</p>
+          <template x-for="(it, idx) in modalPedido.items" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1">
+                <label class="label">Producto</label>
+                <select class="input" x-model="it.producto_id">
+                  <option value="">— Seleccionar —</option>
+                  <template x-for="p in productos" :key="p.id"><option :value="p.id" x-text="p.nombre + ' ($'+fmt(p.precio_venta)+')'"></option></template>
+                </select>
+              </div>
+              <div class="w-24"><label class="label">Cantidad</label><input class="input" type="number" x-model="it.cantidad" min="0.1" step="0.1"></div>
+              <div class="w-32"><label class="label">Precio unit.</label><input class="input" type="number" x-model="it.precio_unitario"></div>
+              <button class="btn-danger mb-0.5" @click="modalPedido.items.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary text-xs mb-4" @click="modalPedido.items.push({producto_id:'',cantidad:1,precio_unitario:0})">+ Agregar producto</button>
+
+          <div class="text-right text-sm font-bold text-slate-800 mb-4">
+            Total: $<span x-text="fmt(modalPedido.items.reduce((s,i)=>s+(+i.cantidad)*(+i.precio_unitario),0))"></span>
+          </div>
+
+          <div class="flex gap-3">
+            <button class="btn-primary flex-1" @click="savePedido()">Confirmar pedido</button>
+            <button class="btn-secondary" @click="showModalPedido=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRODUCCIÓN DIARIA ── -->
+    <div x-show="page==='produccion'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Producción Diaria</h1>
+          <p class="text-slate-400 text-sm">Registrá lo que se produce y la materia prima utilizada</p>
+        </div>
+        <button class="btn-primary" @click="initModalProduccion()">+ Registrar producción</button>
+      </div>
+
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Fecha</th><th class="th">Operario</th>
+            <th class="th">Para entrega</th><th class="th">Para stock</th>
+            <th class="th">Costo teórico</th><th class="th">Costo real</th><th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="p in producciones" :key="p.id">
+              <tr class="table-row">
+                <td class="td text-xs" x-text="fmtFecha(p.fecha)"></td>
+                <td class="td" x-text="p.operario || '—'"></td>
+                <td class="td text-blue-600 font-medium" x-text="p.para_entrega + ' u.'"></td>
+                <td class="td text-green-600 font-medium" x-text="p.para_stock + ' u.'"></td>
+                <td class="td" x-text="'$'+fmt(p.costo_total_teorico)"></td>
+                <td class="td" :class="p.costo_total_real > p.costo_total_teorico ? 'text-red-600 font-medium' : 'text-green-600'" x-text="'$'+fmt(p.costo_total_real)"></td>
+                <td class="td"><button class="btn-secondary text-xs" @click="verProduccion(p.id)">Ver detalle</button></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal ver producción -->
+      <div x-show="showVerProduccion" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Detalle de producción</h2>
+          <template x-if="produccionActual">
+            <div>
+              <div class="grid grid-cols-4 gap-4 mb-4 text-sm">
+                <div><p class="label">Fecha</p><p class="font-medium" x-text="fmtFecha(produccionActual.fecha)"></p></div>
+                <div><p class="label">Operario</p><p class="font-medium" x-text="produccionActual.operario || '—'"></p></div>
+                <div><p class="label">Costo teórico</p><p class="font-bold text-slate-800" x-text="'$'+fmt(produccionActual.costo_total_teorico)"></p></div>
+                <div><p class="label">Costo real</p><p class="font-bold" :class="produccionActual.costo_total_real > produccionActual.costo_total_teorico ? 'text-red-600' : 'text-green-600'" x-text="'$'+fmt(produccionActual.costo_total_real)"></p></div>
+              </div>
+              <p class="text-sm font-semibold text-slate-700 mb-2">Productos elaborados</p>
+              <table class="w-full text-sm mb-4">
+                <thead><tr><th class="th">Producto</th><th class="th">Cantidad</th><th class="th">Destino</th><th class="th">Costo teórico</th></tr></thead>
+                <tbody>
+                  <template x-for="it in produccionActual.items" :key="it.id">
+                    <tr class="table-row">
+                      <td class="td" x-text="it.producto"></td>
+                      <td class="td" x-text="it.cantidad"></td>
+                      <td class="td"><span :class="it.destino==='entrega' ? 'badge-blue' : 'badge-green'" x-text="it.destino"></span></td>
+                      <td class="td" x-text="'$'+fmt(it.costo_teorico)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <p class="text-sm font-semibold text-slate-700 mb-2">Materia prima utilizada</p>
+              <table class="w-full text-sm">
+                <thead><tr><th class="th">Ingrediente</th><th class="th">Teórico</th><th class="th">Real</th><th class="th">Diferencia</th></tr></thead>
+                <tbody>
+                  <template x-for="c in produccionActual.consumos" :key="c.id">
+                    <tr class="table-row">
+                      <td class="td" x-text="c.ingrediente + ' (' + c.unidad + ')'"></td>
+                      <td class="td" x-text="c.cantidad_teorica"></td>
+                      <td class="td" x-text="c.cantidad_real"></td>
+                      <td class="td" :class="c.diferencia > 0 ? 'text-red-600' : 'text-green-600'" x-text="(c.diferencia > 0 ? '+' : '') + c.diferencia"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <button class="btn-secondary mt-4 w-full" @click="showVerProduccion=false">Cerrar</button>
+        </div>
+      </div>
+
+      <!-- Modal nueva producción -->
+      <div x-show="showModalProduccion" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Registrar Producción</h2>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div><label class="label">Operario</label><input class="input" x-model="modalProduccion.operario" placeholder="Nombre del operario"></div>
+            <div><label class="label">Notas</label><input class="input" x-model="modalProduccion.notas" placeholder="Observaciones"></div>
+          </div>
+
+          <p class="text-sm font-semibold text-slate-700 mb-2">Productos elaborados</p>
+          <template x-for="(it, idx) in modalProduccion.items" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1">
+                <label class="label">Producto</label>
+                <select class="input" x-model="it.producto_id">
+                  <option value="">— Seleccionar —</option>
+                  <template x-for="p in productos" :key="p.id"><option :value="p.id" x-text="p.nombre"></option></template>
+                </select>
+              </div>
+              <div class="w-24"><label class="label">Cantidad</label><input class="input" type="number" x-model="it.cantidad" min="0.1" step="0.1"></div>
+              <div class="w-32">
+                <label class="label">Destino</label>
+                <select class="input" x-model="it.destino">
+                  <option value="stock">Stock</option>
+                  <option value="entrega">Entrega</option>
+                </select>
+              </div>
+              <button class="btn-danger mb-0.5" @click="modalProduccion.items.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary text-xs mb-4" @click="modalProduccion.items.push({producto_id:'',cantidad:1,destino:'stock'})">+ Agregar producto</button>
+
+          <p class="text-sm font-semibold text-slate-700 mb-2">Materia prima utilizada (consumo real)</p>
+          <template x-for="(c, idx) in modalProduccion.consumos" :key="idx">
+            <div class="flex gap-2 mb-2 items-end">
+              <div class="flex-1">
+                <label class="label">Ingrediente</label>
+                <select class="input" x-model="c.ingrediente_id">
+                  <option value="">— Seleccionar —</option>
+                  <template x-for="ing in ingredientes" :key="ing.id"><option :value="ing.id" x-text="ing.nombre + ' (' + ing.unidad + ')'"></option></template>
+                </select>
+              </div>
+              <div class="w-28"><label class="label">Cantidad real</label><input class="input" type="number" x-model="c.cantidad_real" step="0.001"></div>
+              <button class="btn-danger mb-0.5" @click="modalProduccion.consumos.splice(idx,1)">✕</button>
+            </div>
+          </template>
+          <button class="btn-secondary text-xs mb-4" @click="modalProduccion.consumos.push({ingrediente_id:'',cantidad_real:0})">+ Agregar ingrediente</button>
+
+          <div class="flex gap-3">
+            <button class="btn-primary flex-1" @click="saveProduccion()">Guardar producción</button>
+            <button class="btn-secondary" @click="showModalProduccion=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GASTOS VARIABLES ── -->
+    <div x-show="page==='gastos_var'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Gastos Variables</h1>
+          <p class="text-slate-400 text-sm">Packaging, limpieza, gas, mantenimiento, etc.</p>
+        </div>
+        <button class="btn-primary" @click="modalGastoVar={}; showModalGastoVar=true">+ Nuevo gasto</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div><label class="label">Mes</label>
+          <select class="input" x-model="gastoVarMes" @change="loadGastosVar()">
+            <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m">
+              <option :value="m" x-text="['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m-1]"></option>
+            </template>
+          </select>
+        </div>
+        <div><label class="label">Año</label><input class="input" type="number" x-model="gastoVarAnio" @change="loadGastosVar()"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="kpi-card">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Total gastos variables</p>
+          <p class="text-2xl font-bold text-red-500 mt-1" x-text="'$'+fmt(gastosVarData?.total || 0)"></p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-slate-500 font-semibold mb-2">Por categoría</p>
+          <template x-for="cat in gastosVarResumen?.por_categoria || []" :key="cat.categoria">
+            <div class="flex justify-between text-sm py-1 border-b border-slate-50">
+              <span class="text-slate-600" x-text="cat.categoria"></span>
+              <span class="font-medium" x-text="'$'+fmt(cat.total)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Concepto</th><th class="th">Categoría</th><th class="th">Proveedor</th>
+            <th class="th">Fecha</th><th class="th text-right">Monto</th><th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="g in gastosVarData?.gastos || []" :key="g.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="g.concepto"></td>
+                <td class="td"><span class="badge-blue" x-text="g.categoria || '—'"></span></td>
+                <td class="td text-slate-500" x-text="g.proveedor || '—'"></td>
+                <td class="td text-slate-400 text-xs" x-text="fmtFecha(g.fecha)"></td>
+                <td class="td text-right font-medium text-red-600" x-text="'$'+fmt(g.monto)"></td>
+                <td class="td"><button class="btn-danger" @click="deleteGastoVar(g.id)">Eliminar</button></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal nuevo gasto variable -->
+      <div x-show="showModalGastoVar" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Nuevo gasto variable</h2>
+          <div class="space-y-3">
+            <div><label class="label">Concepto</label><input class="input" x-model="modalGastoVar.concepto" placeholder="Ej: Cajas cartón"></div>
+            <div><label class="label">Monto</label><input class="input" type="number" x-model="modalGastoVar.monto"></div>
+            <div>
+              <label class="label">Categoría</label>
+              <select class="input" x-model="modalGastoVar.categoria">
+                <option value="">— Sin categoría —</option>
+                <option>Packaging</option><option>Limpieza</option><option>Gas</option>
+                <option>Mantenimiento</option><option>Transporte</option><option>Insumos</option><option>Otro</option>
+              </select>
+            </div>
+            <div>
+              <label class="label">Proveedor (opcional)</label>
+              <select class="input" x-model="modalGastoVar.proveedor_id">
+                <option value="">— Sin proveedor —</option>
+                <template x-for="p in proveedores" :key="p.id"><option :value="p.id" x-text="p.nombre"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button class="btn-primary flex-1" @click="saveGastoVar()">Guardar</button>
+            <button class="btn-secondary" @click="showModalGastoVar=false">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CMV TEÓRICO VS REAL ── -->
+    <div x-show="page==='cmv'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">CMV — Teórico vs Real</h1>
+          <p class="text-slate-400 text-sm">Comparación de costos esperados y reales de producción</p>
+        </div>
+        <div class="flex gap-3">
+          <select class="input w-32" x-model="cmvMes" @change="loadCMV()">
+            <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m">
+              <option :value="m" x-text="['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m-1]"></option>
+            </template>
+          </select>
+          <input class="input w-24" type="number" x-model="cmvAnio" @change="loadCMV()">
+        </div>
+      </div>
+
+      <template x-if="cmvData">
+        <div>
+          <!-- KPIs CMV -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="kpi-card">
+              <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Ventas del período</p>
+              <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(cmvData.total_ventas)"></p>
+            </div>
+            <div class="kpi-card">
+              <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Costo teórico</p>
+              <p class="text-2xl font-bold text-slate-800 mt-1" x-text="'$'+fmt(cmvData.costo_teorico)"></p>
+              <p class="text-xs text-slate-400 mt-1" x-text="cmvData.cmv_teorico_pct + '% ventas'"></p>
+            </div>
+            <div class="kpi-card" :class="cmvData.costo_real > cmvData.costo_teorico ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'">
+              <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Costo real</p>
+              <p class="text-2xl font-bold mt-1" :class="cmvData.costo_real > cmvData.costo_teorico ? 'text-red-600' : 'text-green-600'" x-text="'$'+fmt(cmvData.costo_real)"></p>
+              <p class="text-xs mt-1" :class="cmvData.costo_real > cmvData.costo_teorico ? 'text-red-500' : 'text-green-600'" x-text="cmvData.cmv_real_pct + '% ventas'"></p>
+            </div>
+            <div class="kpi-card" :class="cmvData.diferencia > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'">
+              <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide">Desvío</p>
+              <p class="text-2xl font-bold mt-1" :class="cmvData.diferencia > 0 ? 'text-red-600' : 'text-green-600'" x-text="(cmvData.diferencia > 0 ? '+' : '') + '$'+fmt(cmvData.diferencia)"></p>
+              <p class="text-xs mt-1" :class="cmvData.diferencia > 0 ? 'text-red-500' : 'text-green-600'" x-text="cmvData.diferencia > 0 ? 'Costo mayor al esperado' : 'Dentro del presupuesto'"></p>
+            </div>
+          </div>
+
+          <!-- Detalle por ingrediente -->
+          <div class="card">
+            <h3 class="font-semibold text-slate-700 mb-4">Detalle por ingrediente (ordenado por mayor desvío)</h3>
+            <table class="w-full">
+              <thead><tr>
+                <th class="th">Ingrediente</th><th class="th">Unidad</th>
+                <th class="th text-right">Teórico</th><th class="th text-right">Real</th>
+                <th class="th text-right">Diferencia</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="c in cmvData.detalle_ingredientes" :key="c.ingrediente">
+                  <tr class="table-row">
+                    <td class="td font-medium" x-text="c.ingrediente"></td>
+                    <td class="td text-slate-400" x-text="c.unidad"></td>
+                    <td class="td text-right" x-text="c.cantidad_teorica"></td>
+                    <td class="td text-right" x-text="c.cantidad_real"></td>
+                    <td class="td text-right font-medium" :class="c.diferencia > 0 ? 'text-red-600' : 'text-green-600'" x-text="(c.diferencia > 0 ? '+' : '') + c.diferencia"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+      <template x-if="!cmvData">
+        <div class="card text-center text-slate-400 py-12">
+          <p class="text-4xl mb-4">📊</p>
+          <p>No hay datos de producción para este período</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── ALERTAS DEUDA ── -->
+    <div x-show="page==='alertas_deuda'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Alertas de Deuda</h1>
+          <p class="text-slate-400 text-sm">Clientes con saldo pendiente</p>
+        </div>
+        <button class="btn-secondary" @click="page='clientes'">← Volver a Clientes</button>
+      </div>
+      <div class="card">
+        <table class="w-full">
+          <thead><tr>
+            <th class="th">Cliente</th><th class="th">Saldo deuda</th>
+            <th class="th">Límite crédito</th><th class="th">Estado</th><th class="th">Acciones</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="c in alertasDeuda" :key="c.id">
+              <tr class="table-row">
+                <td class="td font-medium" x-text="c.nombre"></td>
+                <td class="td font-bold text-red-600" x-text="'$'+fmt(c.saldo)"></td>
+                <td class="td text-slate-500" x-text="c.limite_credito > 0 ? '$'+fmt(c.limite_credito) : 'Sin límite'"></td>
+                <td class="td">
+                  <span :class="c.supera_limite ? 'badge-red' : 'badge-yellow'" x-text="c.supera_limite ? '⚠ Supera límite' : 'Con deuda'"></span>
+                </td>
+                <td class="td"><button class="btn-secondary text-xs" @click="verCuentaCorriente(c)">Ver cuenta</button></td>
+              </tr>
+            </template>
+            <tr x-show="alertasDeuda.length === 0">
+              <td colspan="5" class="py-8 text-center text-slate-400">Sin deudas pendientes 🎉</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -861,12 +1466,33 @@ function app() {
     plMes: new Date().getMonth() + 1,
     plAnio: new Date().getFullYear(),
 
+    // CP Data
+    clientes: [], pedidos: [], producciones: [], gastosVarData: null, gastosVarResumen: null,
+    cmvData: null, alertasDeuda: [],
+    filtroPedido: '',
+    gastoVarMes: new Date().getMonth() + 1,
+    gastoVarAnio: new Date().getFullYear(),
+    cmvMes: new Date().getMonth() + 1,
+    cmvAnio: new Date().getFullYear(),
+
+    // CP State
+    clienteActual: null, pedidoActual: null, produccionActual: null,
+    showCuentaCorriente: false, showVerPedido: false, showVerProduccion: false,
+    nuevoMovimiento: { tipo: 'pago', monto: 0, descripcion: '' },
+    pagarPedidoModal: false, montoPago: 0,
+
     // Modals
     showModalIngrediente: false, modalIngrediente: {},
     showModalProducto: false, modalProducto: {},
     showModalReceta: false, modalReceta: { items: [] },
     showVerReceta: false, recetaVista: null,
     showModalVenta: false, modalVenta: { items: [], canal: 'mostrador', descuento: 0 },
+
+    // CP Modals
+    showModalCliente: false, modalCliente: {},
+    showModalPedido: false, modalPedido: { items: [] },
+    showModalProduccion: false, modalProduccion: { items: [], consumos: [] },
+    showModalGastoVar: false, modalGastoVar: {},
     showModalOC: false, modalOC: { items: [] },
     showModalAjuste: false, modalAjuste: {},
     showModalGasto: false, modalGasto: {},
@@ -1110,6 +1736,160 @@ function app() {
       if (!confirm('¿Eliminar proveedor?')) return;
       await this.api('DELETE', '/api/proveedores/'+id);
       await this.loadProveedores();
+    },
+
+    // ── Clientes ──
+    async loadClientes() {
+      if (!this.clientes.length || this.page === 'clientes') {
+        this.clientes = await this.api('GET', '/api/clientes');
+      }
+    },
+    async saveCliente() {
+      try {
+        if (this.modalCliente.id) await this.api('PUT', '/api/clientes/'+this.modalCliente.id, this.modalCliente);
+        else await this.api('POST', '/api/clientes', this.modalCliente);
+        this.showModalCliente = false;
+        this.clientes = await this.api('GET', '/api/clientes');
+      } catch(e) { alert(e.message); }
+    },
+    async deleteCliente(id) {
+      if (!confirm('¿Eliminar cliente?')) return;
+      await this.api('DELETE', '/api/clientes/'+id);
+      this.clientes = await this.api('GET', '/api/clientes');
+    },
+    async verCuentaCorriente(c) {
+      this.clienteActual = await this.api('GET', '/api/clientes/'+c.id);
+      this.nuevoMovimiento = { tipo: 'pago', monto: 0, descripcion: '' };
+      this.showCuentaCorriente = true;
+      this.page = 'clientes';
+    },
+    async registrarMovimiento() {
+      try {
+        await this.api('POST', '/api/clientes/'+this.clienteActual.id+'/movimientos', this.nuevoMovimiento);
+        this.clienteActual = await this.api('GET', '/api/clientes/'+this.clienteActual.id);
+        this.nuevoMovimiento = { tipo: 'pago', monto: 0, descripcion: '' };
+        this.clientes = await this.api('GET', '/api/clientes');
+      } catch(e) { alert(e.message); }
+    },
+    async loadAlertasDeuda() {
+      this.alertasDeuda = await this.api('GET', '/api/clientes/alertas/deuda');
+    },
+
+    // ── Pedidos ──
+    async loadPedidos() {
+      if (!this.clientes.length) await this.loadClientes();
+      if (!this.productos.length) await this.loadProductos();
+      const url = '/api/pedidos' + (this.filtroPedido ? '?estado='+this.filtroPedido : '');
+      this.pedidos = await this.api('GET', url);
+    },
+    initModalPedido() {
+      this.modalPedido = { cliente_id: '', fecha_entrega: '', notas: '', items: [] };
+      this.showModalPedido = true;
+    },
+    async savePedido() {
+      try {
+        const items = this.modalPedido.items.map(i => ({
+          producto_id: parseInt(i.producto_id),
+          cantidad: parseFloat(i.cantidad),
+          precio_unitario: parseFloat(i.precio_unitario),
+        }));
+        await this.api('POST', '/api/pedidos', { ...this.modalPedido, items });
+        this.showModalPedido = false;
+        await this.loadPedidos();
+      } catch(e) { alert(e.message); }
+    },
+    async verPedido(id) {
+      this.pedidoActual = await this.api('GET', '/api/pedidos/'+id);
+      this.pagarPedidoModal = false;
+      this.montoPago = 0;
+      this.showVerPedido = true;
+    },
+    async cambiarEstadoPedido(estado) {
+      try {
+        await this.api('PUT', '/api/pedidos/'+this.pedidoActual.id+'/estado', { estado });
+        this.pedidoActual = await this.api('GET', '/api/pedidos/'+this.pedidoActual.id);
+        await this.loadPedidos();
+      } catch(e) { alert(e.message); }
+    },
+    async registrarPagoPedido() {
+      try {
+        await this.api('POST', '/api/pedidos/'+this.pedidoActual.id+'/pago?monto='+this.montoPago);
+        this.pedidoActual = await this.api('GET', '/api/pedidos/'+this.pedidoActual.id);
+        this.pagarPedidoModal = false;
+        await this.loadPedidos();
+      } catch(e) { alert(e.message); }
+    },
+    async cancelarPedido(id) {
+      if (!confirm('¿Cancelar este pedido?')) return;
+      await this.api('DELETE', '/api/pedidos/'+id);
+      await this.loadPedidos();
+    },
+
+    // ── Producción diaria ──
+    async loadProduccion() {
+      if (!this.productos.length) await this.loadProductos();
+      if (!this.ingredientes.length) await this.loadIngredientes();
+      this.producciones = await this.api('GET', '/api/produccion');
+    },
+    initModalProduccion() {
+      this.modalProduccion = { operario: '', notas: '', items: [], consumos: [] };
+      this.showModalProduccion = true;
+    },
+    async saveProduccion() {
+      try {
+        const items = this.modalProduccion.items.map(i => ({
+          producto_id: parseInt(i.producto_id),
+          cantidad: parseFloat(i.cantidad),
+          destino: i.destino,
+        }));
+        const consumos = this.modalProduccion.consumos
+          .filter(c => c.ingrediente_id)
+          .map(c => ({
+            ingrediente_id: parseInt(c.ingrediente_id),
+            cantidad_real: parseFloat(c.cantidad_real),
+            cantidad_teorica: 0,
+          }));
+        await this.api('POST', '/api/produccion', { ...this.modalProduccion, items, consumos });
+        this.showModalProduccion = false;
+        await this.loadProduccion();
+      } catch(e) { alert(e.message); }
+    },
+    async verProduccion(id) {
+      this.produccionActual = await this.api('GET', '/api/produccion/'+id);
+      this.showVerProduccion = true;
+    },
+
+    // ── Gastos variables ──
+    async loadGastosVar() {
+      const [data, resumen] = await Promise.all([
+        this.api('GET', `/api/gastos-variables?mes=${this.gastoVarMes}&anio=${this.gastoVarAnio}`),
+        this.api('GET', `/api/gastos-variables/resumen/categorias?mes=${this.gastoVarMes}&anio=${this.gastoVarAnio}`),
+      ]);
+      this.gastosVarData = data;
+      this.gastosVarResumen = resumen;
+    },
+    async saveGastoVar() {
+      try {
+        await this.api('POST', '/api/gastos-variables', {
+          ...this.modalGastoVar,
+          mes: this.gastoVarMes,
+          anio: this.gastoVarAnio,
+        });
+        this.showModalGastoVar = false;
+        await this.loadGastosVar();
+      } catch(e) { alert(e.message); }
+    },
+    async deleteGastoVar(id) {
+      if (!confirm('¿Eliminar gasto?')) return;
+      await this.api('DELETE', '/api/gastos-variables/'+id);
+      await this.loadGastosVar();
+    },
+
+    // ── CMV ──
+    async loadCMV() {
+      try {
+        this.cmvData = await this.api('GET', `/api/produccion/cmv/comparacion?mes=${this.cmvMes}&anio=${this.cmvAnio}`);
+      } catch(e) { this.cmvData = null; }
     },
 
     // ── Utils ──

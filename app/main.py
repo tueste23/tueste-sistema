@@ -10,7 +10,7 @@ import os
 from .database import engine, Base, get_db
 from . import models
 from .auth import hash_password, verify_password, create_access_token
-from .routers import ingredientes, recetas, compras, ventas, dashboard, maestros
+from .routers import ingredientes, recetas, compras, ventas, dashboard, maestros, clientes, pedidos, produccion, gastos_variables
 
 # Crear tablas
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,10 @@ app.include_router(compras.router)
 app.include_router(ventas.router)
 app.include_router(dashboard.router)
 app.include_router(maestros.router)
+app.include_router(clientes.router)
+app.include_router(pedidos.router)
+app.include_router(produccion.router)
+app.include_router(gastos_variables.router)
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 

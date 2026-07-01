@@ -256,3 +256,120 @@ class GastoFijo(Base):
     anio = Column(Integer, nullable=False)
     categoria = Column(String(100))  # alquiler, sueldos, servicios, etc.
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+# ─── Gastos variables ─────────────────────────────────────────────────────────
+
+class GastoVariable(Base):
+    __tablename__ = "gastos_variables"
+    id = Column(Integer, primary_key=True)
+    concepto = Column(String(200), nullable=False)
+    monto = Column(Float, nullable=False)
+    categoria = Column(String(100))  # packaging, limpieza, gas, etc.
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    mes = Column(Integer, nullable=False)
+    anio = Column(Integer, nullable=False)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+    proveedor = relationship("Proveedor")
+
+# ─── Clientes ─────────────────────────────────────────────────────────────────
+
+class Cliente(Base):
+    __tablename__ = "clientes"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(150), nullable=False)
+    tipo = Column(String(50), default="externo")  # interno (tueste), externo
+    contacto = Column(String(150))
+    telefono = Column(String(50))
+    email = Column(String(150))
+    direccion = Column(String(250))
+    limite_credito = Column(Float, default=0.0)
+    saldo = Column(Float, default=0.0)  # positivo = nos deben, negativo = les debemos
+    activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+    pedidos = relationship("Pedido", back_populates="cliente")
+    movimientos_cuenta = relationship("MovimientoCuenta", back_populates="cliente")
+
+class MovimientoCuenta(Base):
+    __tablename__ = "movimientos_cuenta"
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    tipo = Column(String(30), nullable=False)  # cargo, pago, nota_credito
+    monto = Column(Float, nullable=False)
+    descripcion = Column(String(300))
+    pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=True)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+
+    cliente = relationship("Cliente", back_populates="movimientos_cuenta")
+
+# ─── Pedidos de clientes ──────────────────────────────────────────────────────
+
+class Pedido(Base):
+    __tablename__ = "pedidos"
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    fecha_pedido = Column(DateTime(timezone=True), server_default=func.now())
+    fecha_entrega = Column(DateTime(timezone=True), nullable=True)
+    estado = Column(String(30), default="pendiente")  # pendiente, en_produccion, entregado, parcial, cancelado
+    total = Column(Float, default=0.0)
+    monto_pagado = Column(Float, default=0.0)
+    notas = Column(Text)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    cliente = relationship("Cliente", back_populates="pedidos")
+    items = relationship("ItemPedido", back_populates="pedido", cascade="all, delete-orphan")
+
+class ItemPedido(Base):
+    __tablename__ = "items_pedido"
+    id = Column(Integer, primary_key=True)
+    pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=False)
+    producto_id = Column(Integer, ForeignKey("productos.id"), nullable=False)
+    cantidad = Column(Float, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    cantidad_entregada = Column(Float, default=0.0)
+    subtotal = Column(Float, nullable=False)
+
+    pedido = relationship("Pedido", back_populates="items")
+    producto = relationship("Producto")
+
+# ─── Producción diaria ────────────────────────────────────────────────────────
+
+class ProduccionDiaria(Base):
+    __tablename__ = "produccion_diaria"
+    id = Column(Integer, primary_key=True)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    operario = Column(String(100))
+    notas = Column(Text)
+    costo_total_teorico = Column(Float, default=0.0)   # según recetas
+    costo_total_real = Column(Float, default=0.0)       # materia prima real usada
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+    items = relationship("ItemProduccion", back_populates="produccion", cascade="all, delete-orphan")
+    consumos = relationship("ConsumoProduccion", back_populates="produccion", cascade="all, delete-orphan")
+
+class ItemProduccion(Base):
+    __tablename__ = "items_produccion"
+    id = Column(Integer, primary_key=True)
+    produccion_id = Column(Integer, ForeignKey("produccion_diaria.id"), nullable=False)
+    producto_id = Column(Integer, ForeignKey("productos.id"), nullable=False)
+    cantidad = Column(Float, nullable=False)
+    destino = Column(String(30), default="stock")  # entrega, stock
+    pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=True)  # si es para un pedido
+    costo_teorico = Column(Float, default=0.0)
+
+    produccion = relationship("ProduccionDiaria", back_populates="items")
+    producto = relationship("Producto")
+
+class ConsumoProduccion(Base):
+    __tablename__ = "consumo_produccion"
+    id = Column(Integer, primary_key=True)
+    produccion_id = Column(Integer, ForeignKey("produccion_diaria.id"), nullable=False)
+    ingrediente_id = Column(Integer, ForeignKey("ingredientes.id"), nullable=False)
+    cantidad_teorica = Column(Float, default=0.0)   # según recetas
+    cantidad_real = Column(Float, default=0.0)       # lo que realmente se usó
+    diferencia = Column(Float, default=0.0)          # real - teorico
+
+    produccion = relationship("ProduccionDiaria", back_populates="consumos")
+    ingrediente = relationship("Ingrediente")
