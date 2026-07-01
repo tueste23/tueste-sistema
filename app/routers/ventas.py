@@ -20,7 +20,14 @@ class VentaCreate(BaseModel):
     canal: str = "mostrador"
     descuento: float = 0.0
     notas: Optional[str] = None
-    fecha: Optional[date] = None   # si se omite, usa la fecha actual
+    fecha: Optional[date] = None              # si se omite, usa la fecha actual
+    # Datos fiscales
+    tipo_fiscal: str = "no_fiscal"            # fiscal / no_fiscal
+    tipo_comprobante: Optional[str] = None    # factura_a / factura_b / factura_c / ticket
+    numero_comprobante: Optional[str] = None
+    medio_pago: str = "efectivo"              # efectivo / transferencia / debito / credito / mercado_pago
+    cuit_receptor: Optional[str] = None
+    razon_social_receptor: Optional[str] = None
     items: List[ItemVentaIn]
 
 @router.get("")
@@ -48,8 +55,15 @@ def listar(
             "canal": v.canal,
             "total": v.total,
             "costo_total": v.costo_total,
+            "descuento": v.descuento,
             "margen": round((v.total - v.costo_total) / v.total * 100, 1) if v.total > 0 else 0,
             "items_count": len(v.items),
+            "tipo_fiscal": v.tipo_fiscal,
+            "tipo_comprobante": v.tipo_comprobante,
+            "numero_comprobante": v.numero_comprobante,
+            "medio_pago": v.medio_pago,
+            "cuit_receptor": v.cuit_receptor,
+            "razon_social_receptor": v.razon_social_receptor,
         }
         for v in ventas
     ]
@@ -158,6 +172,12 @@ def crear(data: VentaCreate, db: Session = Depends(get_db), current_user=Depends
         notas=data.notas,
         usuario_id=current_user.id,
         fecha=fecha_venta,
+        tipo_fiscal=data.tipo_fiscal,
+        tipo_comprobante=data.tipo_comprobante,
+        numero_comprobante=data.numero_comprobante,
+        medio_pago=data.medio_pago,
+        cuit_receptor=data.cuit_receptor,
+        razon_social_receptor=data.razon_social_receptor,
     )
     db.add(venta)
     db.flush()

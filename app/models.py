@@ -209,7 +209,16 @@ class Venta(Base):
     total = Column(Float, default=0.0)
     costo_total = Column(Float, default=0.0)
     descuento = Column(Float, default=0.0)
-    canal = Column(String(50), default="mostrador")  # mostrador, delivery, online
+    canal = Column(String(50), default="mostrador")  # mostrador, delivery, online, resumen_mensual
+
+    # Datos fiscales
+    tipo_fiscal       = Column(String(20), default="no_fiscal")  # fiscal / no_fiscal
+    tipo_comprobante  = Column(String(20), nullable=True)         # factura_a / factura_b / factura_c / ticket
+    numero_comprobante= Column(String(50), nullable=True)         # ej: 0001-00000123
+    medio_pago        = Column(String(30), default="efectivo")    # efectivo / transferencia / debito / credito / mercado_pago
+    cuit_receptor     = Column(String(20), nullable=True)         # CUIT del cliente (Factura A)
+    razon_social_receptor = Column(String(150), nullable=True)    # Razón social (Factura A)
+
     notas = Column(Text)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
