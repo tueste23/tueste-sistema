@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import datetime, date
+from datetime import datetime, date, time as dtime
 from ..database import get_db
 from ..auth import get_current_user
 from .. import models
@@ -148,7 +148,7 @@ def crear(data: VentaCreate, db: Session = Depends(get_db), current_user=Depends
         items_preparados.append((prod, item_data.cantidad, precio, costo_unit, subtotal))
 
     total_final = max(total - data.descuento, 0)
-    fecha_venta = datetime.combine(data.fecha, datetime.min.time()) if data.fecha else datetime.utcnow()
+    fecha_venta = datetime.combine(data.fecha, dtime(12, 0, 0)) if data.fecha else datetime.utcnow()
     venta = models.Venta(
         local_id=data.local_id,
         canal=data.canal,
