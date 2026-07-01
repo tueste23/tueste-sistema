@@ -82,8 +82,10 @@ class Ingrediente(Base):
     nombre = Column(String(150), nullable=False)
     unidad = Column(String(30), nullable=False)  # kg, litro, unidad, g, ml, etc.
     costo_actual = Column(Float, default=0.0)   # costo por unidad
-    stock_actual = Column(Float, default=0.0)
+    stock_actual = Column(Float, default=0.0)   # teórico: calculado por trazabilidad
     stock_minimo = Column(Float, default=0.0)
+    stock_real   = Column(Float, nullable=True)  # físico: ingresado manualmente en conteo
+    fecha_conteo = Column(DateTime(timezone=True), nullable=True)  # último conteo físico
     categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=True)
     proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
     activo = Column(Boolean, default=True)

@@ -660,50 +660,99 @@
     <!-- ── STOCK ── -->
     <div x-show="page==='stock'" class="p-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Inventario / Stock</h1>
-        <button class="btn-primary" @click="showModalAjuste=true; modalAjuste={}">Ajuste manual de stock</button>
-      </div>
-      <div class="grid grid-cols-2 gap-6 mb-6">
-        <div class="card">
-          <h3 class="font-semibold text-slate-700 mb-4">⚠️ Stock crítico</h3>
-          <template x-if="stockCritico.length === 0">
-            <p class="text-green-500 text-sm">✅ Todo el stock está en niveles normales.</p>
-          </template>
-          <template x-for="i in stockCritico" :key="i.id">
-            <div class="flex justify-between items-center py-2 border-b border-red-50">
-              <span class="text-sm font-medium text-red-700" x-text="i.nombre"></span>
-              <span class="text-xs text-red-500" x-text="fmt(i.stock_actual)+'/'+fmt(i.stock_minimo)+' '+i.unidad"></span>
-            </div>
-          </template>
-        </div>
-        <div class="card">
-          <h3 class="font-semibold text-slate-700 mb-4">Últimos movimientos</h3>
-          <template x-for="m in movimientos.slice(0,10)" :key="m.id">
-            <div class="flex justify-between items-center py-1.5 border-b border-slate-50">
-              <div>
-                <span class="text-sm font-medium text-slate-700" x-text="m.ingrediente"></span>
-                <span class="text-xs text-slate-400 ml-2" x-text="m.motivo"></span>
-              </div>
-              <span :class="m.cantidad > 0 ? 'text-green-600' : 'text-red-500'" class="text-sm font-semibold" x-text="(m.cantidad>0?'+':'')+fmt(m.cantidad)"></span>
-            </div>
-          </template>
+        <h1 class="text-2xl font-bold text-slate-800">Conteo de Stock</h1>
+        <div class="flex gap-3 items-center">
+          <input class="input w-64" placeholder="Buscar ingrediente..." x-model="stockFiltro">
+          <button class="btn-primary" @click="guardarConteo()" x-show="conteoEditado">💾 Guardar conteo</button>
+          <button class="btn-secondary" @click="showModalAjuste=true; modalAjuste={}">Ajuste manual</button>
         </div>
       </div>
-      <!-- Modal ajuste -->
+
+      <!-- Resumen rápido -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="card text-center">
+          <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Con diferencia</p>
+          <p class="text-2xl font-bold text-amber-600" x-text="ingredientes.filter(i=>i.diferencia!==null&&i.diferencia!==0).length"></p>
+          <p class="text-xs text-slate-400 mt-1">ingredientes</p>
+        </div>
+        <div class="card text-center">
+          <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Faltante</p>
+          <p class="text-2xl font-bold text-red-600" x-text="ingredientes.filter(i=>i.diferencia!==null&&i.diferencia<0).length"></p>
+          <p class="text-xs text-slate-400 mt-1">ingredientes</p>
+        </div>
+        <div class="card text-center">
+          <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Sobrante</p>
+          <p class="text-2xl font-bold text-green-600" x-text="ingredientes.filter(i=>i.diferencia!==null&&i.diferencia>0).length"></p>
+          <p class="text-xs text-slate-400 mt-1">ingredientes</p>
+        </div>
+      </div>
+
+      <!-- Tabla de conteo -->
+      <div class="card p-0 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="th text-left pl-4">Ingrediente</th>
+              <th class="th text-center">Unidad</th>
+              <th class="th text-right" title="Calculado automáticamente por compras, producción y ventas">📊 Stock Teórico</th>
+              <th class="th text-right" title="Lo que hay físicamente en depósito — completar manualmente">📝 Stock Real</th>
+              <th class="th text-right">Diferencia</th>
+              <th class="th text-center">Último conteo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="i in ingredientes.filter(x => !stockFiltro || x.nombre.toLowerCase().includes(stockFiltro.toLowerCase()))" :key="i.id">
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="td pl-4 font-medium text-slate-800" x-text="i.nombre"></td>
+                <td class="td text-center text-slate-400 text-xs" x-text="i.unidad"></td>
+                <!-- Stock teórico -->
+                <td class="td text-right font-mono text-slate-600" x-text="fmt4(i.stock_actual)"></td>
+                <!-- Stock real: editable inline -->
+                <td class="td text-right">
+                  <input
+                    type="number" step="0.001" min="0"
+                    class="w-28 text-right border border-slate-200 rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:border-blue-400"
+                    :class="i.stock_real !== null ? 'bg-blue-50 border-blue-300' : 'bg-white'"
+                    :value="i.stock_real ?? ''"
+                    placeholder="—"
+                    @input="setStockReal(i.id, $event.target.value)"
+                  >
+                </td>
+                <!-- Diferencia -->
+                <td class="td text-right font-mono font-semibold">
+                  <template x-if="i.diferencia !== null">
+                    <span
+                      :class="i.diferencia > 0 ? 'text-green-600' : i.diferencia < 0 ? 'text-red-500' : 'text-slate-400'"
+                      x-text="(i.diferencia > 0 ? '+' : '') + fmt4(i.diferencia)"
+                    ></span>
+                  </template>
+                  <template x-if="i.diferencia === null">
+                    <span class="text-slate-300">—</span>
+                  </template>
+                </td>
+                <!-- Fecha conteo -->
+                <td class="td text-center text-xs text-slate-400" x-text="i.fecha_conteo ? new Date(i.fecha_conteo).toLocaleDateString('es-AR') : '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal ajuste manual -->
       <div x-show="showModalAjuste" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h2 class="font-bold text-lg text-slate-800 mb-4">Ajuste de stock</h2>
+          <h2 class="font-bold text-lg text-slate-800 mb-4">Ajuste manual de stock</h2>
           <div class="space-y-3">
             <div><label class="label">Ingrediente</label>
               <select class="input" x-model="modalAjuste.ingrediente_id">
                 <option value="">Seleccionar</option>
-                <template x-for="i in ingredientes" :key="i.id"><option :value="i.id" x-text="i.nombre + ' (actual: '+fmt(i.stock_actual)+' '+i.unidad+')'"></option></template>
+                <template x-for="i in ingredientes" :key="i.id"><option :value="i.id" x-text="i.nombre + ' (teórico: '+fmt4(i.stock_actual)+' '+i.unidad+')'"></option></template>
               </select>
             </div>
-            <div><label class="label">Stock real (inventario físico)</label>
+            <div><label class="label">Cantidad a ajustar (+ para agregar, - para restar)</label>
               <input class="input" type="number" step="0.001" x-model="modalAjuste.cantidad_nueva">
             </div>
-            <div><label class="label">Motivo del ajuste</label>
+            <div><label class="label">Motivo</label>
               <input class="input" x-model="modalAjuste.motivo" placeholder="Inventario físico, merma, rotura...">
             </div>
           </div>
@@ -1489,6 +1538,9 @@ function app() {
     ventasResumen: null, pl: null,
     plMes: new Date().getMonth() + 1,
     plAnio: new Date().getFullYear(),
+    stockFiltro: '',
+    conteoEditado: false,
+    conteoBuffer: {},   // id -> stock_real pendiente de guardar
 
     // CP Data
     clientes: [], pedidos: [], producciones: [], gastosVarData: null, gastosVarResumen: null,
@@ -1708,19 +1760,41 @@ function app() {
 
     // ── Stock ──
     async loadStock() {
-      if (!this.ingredientes.length) await this.loadIngredientes();
-      [this.movimientos, this.stockCritico] = await Promise.all([
-        this.api('GET', '/api/stock/movimientos'),
-        this.api('GET', '/api/ingredientes/stock-critico'),
-      ]);
+      await this.loadIngredientes();
+      this.conteoBuffer = {};
+      this.conteoEditado = false;
+    },
+    setStockReal(id, valor) {
+      const v = valor === '' ? null : parseFloat(valor);
+      this.conteoBuffer[id] = v;
+      const ing = this.ingredientes.find(i => i.id === id);
+      if (ing) {
+        ing.stock_real = v;
+        ing.diferencia = v !== null ? Math.round((v - ing.stock_actual) * 10000) / 10000 : null;
+      }
+      this.conteoEditado = true;
+    },
+    async guardarConteo() {
+      const items = Object.entries(this.conteoBuffer)
+        .filter(([, v]) => v !== null)
+        .map(([id, stock_real]) => ({ id: parseInt(id), stock_real }));
+      if (!items.length) return;
+      await this.api('POST', '/api/ingredientes/conteo', items);
+      this.conteoBuffer = {};
+      this.conteoEditado = false;
+      await this.loadIngredientes();
+      alert(`✅ Conteo guardado para ${items.length} ingrediente(s)`);
     },
     async saveAjuste() {
       try {
         await this.api('POST', '/api/stock/ajuste', this.modalAjuste);
         this.showModalAjuste = false;
-        await this.loadStock();
         await this.loadIngredientes();
       } catch(e) { alert(e.message); }
+    },
+    fmt4(n) {
+      if (n === null || n === undefined) return '—';
+      return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
     },
 
     // ── P&L ──

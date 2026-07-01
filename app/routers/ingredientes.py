@@ -28,6 +28,10 @@ class IngredienteUpdate(BaseModel):
     categoria_id: Optional[int] = None
     proveedor_id: Optional[int] = None
 
+class ItemConteo(BaseModel):
+    id: int
+    stock_real: float
+
 def recalcular_recetas_con_ingrediente(db: Session, ingrediente_id: int):
     """Recalcula el costo de todas las recetas que usan este ingrediente."""
     items = db.query(models.ItemReceta).filter(models.ItemReceta.ingrediente_id == ingrediente_id).all()
@@ -44,23 +48,41 @@ def recalcular_recetas_con_ingrediente(db: Session, ingrediente_id: int):
 
 @router.get("")
 def listar(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    items = db.query(models.Ingrediente).filter(models.Ingrediente.activo == True).all()
+    items = db.query(models.Ingrediente).filter(models.Ingrediente.activo == True).order_by(models.Ingrediente.nombre).all()
     result = []
     for i in items:
+        diferencia = round(i.stock_real - i.stock_actual, 4) if i.stock_real is not None else None
         result.append({
             "id": i.id,
             "nombre": i.nombre,
             "unidad": i.unidad,
             "costo_actual": i.costo_actual,
-            "stock_actual": i.stock_actual,
+            "stock_actual": i.stock_actual,       # teórico (trazabilidad)
+            "stock_real": i.stock_real,            # físico (conteo manual)
+            "fecha_conteo": i.fecha_conteo,
+            "diferencia": diferencia,              # real - teórico
             "stock_minimo": i.stock_minimo,
-            "stock_critico": i.stock_actual <= i.stock_minimo,
+            "stock_critico": i.stock_actual <= i.stock_minimo and i.stock_minimo > 0,
             "categoria_id": i.categoria_id,
             "categoria": i.categoria.nombre if i.categoria else None,
             "proveedor_id": i.proveedor_id,
             "proveedor": i.proveedor_principal.nombre if i.proveedor_principal else None,
         })
     return result
+
+@router.post("/conteo")
+def guardar_conteo(items: List[ItemConteo], db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Guarda el conteo físico de stock para múltiples ingredientes a la vez."""
+    ahora = datetime.utcnow()
+    ok = 0
+    for item in items:
+        ing = db.query(models.Ingrediente).filter(models.Ingrediente.id == item.id).first()
+        if ing:
+            ing.stock_real   = item.stock_real
+            ing.fecha_conteo = ahora
+            ok += 1
+    db.commit()
+    return {"ok": True, "actualizados": ok, "fecha": ahora}
 
 @router.get("/stock-critico")
 def stock_critico(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
